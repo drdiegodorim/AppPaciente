@@ -1,0 +1,6 @@
+{
+  "name": "Consultório - Plano de Cuidado",
+  "description": "Plataforma de acompanhamento e planos de cuidado personalizados para pacientes do consultório (Enxaqueca, Parkinson, Demência, Epilepsia, Espasticidade, etc.).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
