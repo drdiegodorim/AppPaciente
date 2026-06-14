@@ -381,73 +381,7 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor }: Log
           )}
         </div>
 
-        {/* Demo Fast Sandbox Accents - Helps evaluate different profiles very easily */}
-        {!isRegisteringDoctor && (
-          <div className="rounded-2xl border border-slate-200 bg-emerald-50/50 p-5 space-y-4">
-            <div className="flex items-center gap-2 text-slate-800 font-semibold text-sm">
-              <Info className="h-4 w-4 text-emerald-600" />
-              <span>Sandbox de Teste Rápido (Login Direto)</span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Utilize os cartões abaixo para simular perfis cadastrados instantaneamente, sem precisar preencher dados:
-            </p>
 
-            <div className="space-y-3.5">
-              <div>
-                <p className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Perfil Profissional</p>
-                <button
-                  type="button"
-                  onClick={selectDoctorPreset}
-                  className="w-full flex items-center justify-between text-left rounded-xl bg-white border border-slate-200 hover:border-teal-400 p-2.5 transition group cursor-pointer"
-                >
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-700">Dr. Diego Dorim (Médico)</h4>
-                    <p className="text-[10px] text-slate-400">Poderá cadastrar novos pacientes e ver a evolução deles.</p>
-                  </div>
-                  <span className="text-[11px] font-medium text-teal-600 bg-teal-50 px-2 py-1 rounded group-hover:bg-teal-100">
-                    Acessar
-                  </span>
-                </button>
-              </div>
-
-              <div>
-                <p className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Perfis de Pacientes Modelos</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
-                  {patients.map((pat) => (
-                    <button
-                      key={pat.id}
-                      type="button"
-                      onClick={() => selectPatientPreset(pat.username, pat.requiresPasswordChange ? 'abc123' : 'senha123')}
-                      className="flex flex-col justify-between rounded-xl bg-white border border-slate-200 hover:border-teal-400 p-2 text-left transition group cursor-pointer"
-                    >
-                      <div className="w-full">
-                        <div className="flex justify-between items-start">
-                          <span className="text-xs font-bold text-slate-700 truncate block max-w-[120px]">
-                            {pat.firstName} {pat.lastName}
-                          </span>
-                          {pat.requiresPasswordChange ? (
-                            <span className="text-[8px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 px-1 rounded">
-                              Nova Senha IP
-                            </span>
-                          ) : (
-                            <span className="text-[8px] font-bold uppercase tracking-wider bg-teal-50 text-teal-700 px-1 rounded">
-                              Ativo
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-500 mt-1">Diag: <strong className="text-slate-600">{pat.diagnostic}</strong></p>
-                        <p className="text-[9px] font-mono text-slate-400">user: {pat.username}</p>
-                        <p className="text-[9px] font-mono text-slate-400">
-                          pass: {pat.requiresPasswordChange ? 'abc123' : 'senha123'}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
