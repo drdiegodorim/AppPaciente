@@ -60,6 +60,13 @@ export default function PatientDashboard({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
+  // Exam Upload States
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [examSelected, setExamSelected] = useState<File | null>(null);
+  const [examNotes, setExamNotes] = useState('');
+  const [uploadingProgress, setUploadingProgress] = useState<number | null>(null);
+  const [examSuccess, setExamSuccess] = useState(false);
+
   // Push Notifications States
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => {
     return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
@@ -359,6 +366,47 @@ export default function PatientDashboard({
       ...prev,
       [fieldId]: value
     }));
+  };
+
+  const handleExamSelected = (file: File) => {
+    setExamSelected(file);
+    setExamSuccess(false);
+    setUploadingProgress(null);
+    // Auto preset examNotes with name minus extension
+    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+    setExamNotes(baseName);
+  };
+
+  const handleExamUpload = () => {
+    if (!examSelected) return;
+    
+    setUploadingProgress(0);
+    
+    // Simulate upload progress
+    let currentPrg = 0;
+    const interval = setInterval(() => {
+      currentPrg += Math.floor(Math.random() * 20) + 15;
+      if (currentPrg >= 100) {
+        currentPrg = 100;
+        clearInterval(interval);
+        
+        // Log the exam upload into patient's logs so the doctor can view it!
+        const logNotes = `📄 [EXAME ENVIADO] ${examSelected.name} (${(examSelected.size / 1024 / 1024).toFixed(2)} MB). Diagnóstico: ${currentPatient.diagnostic}. Obs: ${examNotes || 'Sem observações'}`;
+        onAddLog({
+          painScale: 0,
+          triggers: 'Nenhum',
+          medicationUsed: false,
+          medName: ''
+        }, logNotes);
+        
+        setExamSuccess(true);
+        setExamSelected(null);
+        setExamNotes('');
+        setUploadingProgress(null);
+      } else {
+        setUploadingProgress(currentPrg);
+      }
+    }, 150);
   };
 
   // Get historical logs for this patient only
@@ -818,7 +866,164 @@ export default function PatientDashboard({
 
           {/* Column 2: Study Material & Guidelines (lg:col-span-6) */}
           <div className="lg:col-span-6 space-y-6">
-            
+
+            {/* Atendimento & Envio de Exames */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
+              <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2 text-sm">
+                <Heart className="h-4.5 w-4.5 text-teal-600" />
+                💬 Secretaria & Envio de Exames
+              </h3>
+
+              {/* Botão de WhatsApp */}
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Precisa falar com nossa recepcionista ou reagendar sua consulta? Entre em contato diretamente pelo WhatsApp:
+                </p>
+                <a
+                  href="https://wa.me/5511999999999?text=Olá,%20falo%20do%20Portal%20do%20Paciente%20do%20Instituto%20Diego%20Dorim."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold py-3 px-4 transition-all duration-200 shadow-md shadow-emerald-600/10 cursor-pointer"
+                >
+                  <svg className="h-4.5 w-4.5 fill-current shrink-0" viewBox="0 0 24 24">
+                    <path d="M12.004 0C5.372 0 0 5.373 0 12.011a11.91 11.91 0 0 0 1.621 5.952l-1.724 6.29 6.438-1.688a11.91 11.91 0 0 0 5.673 1.442h.005c6.627 0 12-5.377 12-12.015C24 5.373 18.628 0 12.004 0zm6.914 17.151c-.269.756-1.571 1.487-2.164 1.579-.593.093-1.187.143-3.411-.782-2.839-1.182-4.664-4.08-4.806-4.269-.142-.189-1.221-1.627-1.221-3.111 0-1.485.762-2.214 1.033-2.518.271-.303.593-.38.791-.38.198 0 .396.006.569.014.18.008.421-.069.658.504.240.58.818 1.996.889 2.14.072.143.12.311.025.503-.095.19-.142.304-.284.471-.142.168-.299.376-.427.505-.143.143-.293.299-.126.586.167.287.744 1.233 1.597 1.991.898.797 1.657 1.042 1.892 1.157.235.115.372.097.51-.06.136-.157.593-.69.751-.925.158-.235.316-.197.534-.117.218.081 1.385.655 1.623.774.238.118.396.177.456.28.06.103.06.593-.209 1.349z"/>
+                  </svg>
+                  Falar com o Consultório no WhatsApp
+                </a>
+              </div>
+
+              <hr className="border-slate-100" />
+
+              {/* Seção Interactiva de Envio de Exames */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded bg-teal-50 text-teal-600 shrink-0">
+                    <FileText className="h-3.5 w-3.5" />
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800">Enviar Resultados de Exames</h4>
+                    <p className="text-[10px] text-slate-400">Envie laudos de ressonância ou exames de laboratório</p>
+                  </div>
+                </div>
+
+                {/* Drag and drop selection container */}
+                <div 
+                  onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
+                  onDragLeave={() => setIsDragActive(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragActive(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      handleExamSelected(e.dataTransfer.files[0]);
+                    }
+                  }}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition ${
+                    isDragActive 
+                      ? 'border-teal-500 bg-teal-50/20' 
+                      : examSelected 
+                      ? 'border-emerald-300 bg-emerald-50/10'
+                      : 'border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-slate-50'
+                  }`}
+                  onClick={() => document.getElementById('exam-input')?.click()}
+                >
+                  <input 
+                    type="file" 
+                    id="exam-input" 
+                    className="hidden" 
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleExamSelected(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  {!examSelected ? (
+                    <div className="space-y-1.5">
+                      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                      </div>
+                      <p className="text-[11px] font-semibold text-slate-700">Arrastar exame aqui ou clique para selecionar</p>
+                      <p className="text-[9px] text-slate-400">PDF, PNG ou JPG de até 15MB</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 text-left">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-8 w-8 items-center justify-center rounded bg-emerald-100 text-emerald-700 shrink-0">
+                          <CheckCircle className="h-4.5 w-4.5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-slate-800 truncate">{examSelected.name}</p>
+                          <p className="text-[9px] text-slate-400">{(examSelected.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={(e) => { e.stopPropagation(); setExamSelected(null); }}
+                          className="text-xs text-rose-500 hover:text-rose-700 font-bold px-1 cursor-pointer"
+                        >
+                          Remover
+                        </button>
+                      </div>
+
+                      {/* Informative text field for exam observations */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">Observações do Exame</label>
+                        <input
+                          type="text"
+                          className="w-full text-xs rounded-lg border border-slate-200 px-2 py-1.5 bg-white text-slate-800 placeholder-slate-400 cursor-text"
+                          onClick={(e) => e.stopPropagation()}
+                          value={examNotes}
+                          onChange={(e) => setExamNotes(e.target.value)}
+                          placeholder="Ex: Laudo RM Crânio 12/2025"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Status / Action Button */}
+                {examSelected && (
+                  <div className="space-y-2">
+                    {uploadingProgress !== null ? (
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-[10px] font-bold text-slate-600 font-mono">
+                          <span>{uploadingProgress < 100 ? 'Transmitindo exame...' : 'Segurança verificada!'}</span>
+                          <span>{uploadingProgress}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className="bg-teal-600 h-1.5 rounded-full transition-all duration-150"
+                            style={{ width: `${uploadingProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleExamUpload}
+                        className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold py-2.5 px-4 cursor-pointer"
+                      >
+                        Enviar Exame Selecionado
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {examSuccess && (
+                  <div className="rounded-xl bg-emerald-50 p-3.5 border border-emerald-100 flex items-start gap-2 animate-fade-in animate-duration-150">
+                    <CheckCircle className="h-4.5 w-4.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-emerald-800">Uploader Seguro Integrado</h4>
+                      <p className="text-[10px] text-slate-600 leading-relaxed mt-0.5">
+                        Exame enviado e arquivado com sucesso no seu prontuário clínico. Dr. Diego Dorim foi notificado na sala interna.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* YouTube Material */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
               <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2 text-sm">

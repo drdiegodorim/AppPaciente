@@ -2,17 +2,7 @@
  * Clinical Care Plan Types
  */
 
-export type DiagnosticType =
-  | 'Enxaqueca'
-  | 'Parkinson'
-  | 'Demencia'
-  | 'Epilepsia'
-  | 'Espasticidade'
-  | 'Bruxismo'
-  | 'Distonia cervical'
-  | 'Distonia de face'
-  | 'Distonia focal'
-  | 'Sialorreia';
+export type DiagnosticType = 'Enxaqueca';
 
 export interface CarePlanContent {
   id: DiagnosticType;

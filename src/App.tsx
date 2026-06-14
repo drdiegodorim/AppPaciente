@@ -42,7 +42,7 @@ const DIRECTORY_MOCK_PATIENTS: Patient[] = [
     firstName: 'Carlos',
     lastName: 'Oliveira',
     username: 'carlos.oliveira',
-    diagnostic: 'Parkinson',
+    diagnostic: 'Enxaqueca',
     requiresPasswordChange: false,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString() // 7 days ago
   },
@@ -51,7 +51,7 @@ const DIRECTORY_MOCK_PATIENTS: Patient[] = [
     firstName: 'Beatriz',
     lastName: 'Costa',
     username: 'beatriz.costa',
-    diagnostic: 'Demencia',
+    diagnostic: 'Enxaqueca',
     requiresPasswordChange: true, // Needs default change abc123
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() // 2 days ago
   },
@@ -60,7 +60,7 @@ const DIRECTORY_MOCK_PATIENTS: Patient[] = [
     firstName: 'João',
     lastName: 'Santos',
     username: 'joao.santos',
-    diagnostic: 'Bruxismo',
+    diagnostic: 'Enxaqueca',
     requiresPasswordChange: true, // Needs default change abc123
     createdAt: new Date().toISOString()
   }
@@ -109,28 +109,28 @@ const DIRECTORY_MOCK_LOGS: TrackingEntry[] = [
   {
     id: 'l4',
     patientId: 'p2',
-    diagnostic: 'Parkinson',
+    diagnostic: 'Enxaqueca',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
     data: {
-      tremorLevel: 'Leve (intermitente, não bloqueia tarefas)',
-      rigidity: 'Leve (membros flexíveis, pouca lentidão)',
-      adherence: true,
-      freezingIncidents: false
+      painScale: 3,
+      triggers: 'Estresse/Ansiedade',
+      medicationUsed: true,
+      medName: 'Dipirona 500mg'
     },
-    notes: 'Consegui fazer a caminhada de 20 minutos no parque em período ON.'
+    notes: 'Senti dor leve ao fim do dia após reunião tensa, resolvida com medicação de resgate.'
   },
   {
     id: 'l5',
     patientId: 'p2',
-    diagnostic: 'Parkinson',
+    diagnostic: 'Enxaqueca',
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 10).toISOString(), // 10 hours ago
     data: {
-      tremorLevel: 'Moderado (sentido em repouso e ação)',
-      rigidity: 'Moderada (alguma lentidão nas trocas de postura)',
-      adherence: false, // Missed target hour
-      freezingIncidents: true
+      painScale: 5,
+      triggers: 'Falta de sono',
+      medicationUsed: true,
+      medName: 'Triptano 80mg'
     },
-    notes: 'Atrasei o comprimido da manhã por 45 minutos e senti congelamento de marcha ao tentar levantar da mesa de café.'
+    notes: 'Acordei com cefaleia unilateral moderada devido a sono interrompido.'
   }
 ];
 
