@@ -311,6 +311,7 @@ export default function PatientDashboard({
   // Form states for tracking log
   const carePlan = CLINICAL_CARE_PLANS[currentPatient.diagnostic];
   const fields = carePlan?.trackerConfig.fields || [];
+  const isMigraine = currentPatient.diagnostic === 'Enxaqueca';
 
   const [formData, setFormData] = useState<Record<string, any>>(() => {
     // Initial fields preset values
@@ -728,10 +729,11 @@ export default function PatientDashboard({
         </div>
 
         {/* Dashboard Unified Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className={isMigraine ? "grid grid-cols-1 lg:grid-cols-12 gap-8" : "max-w-3xl mx-auto"}>
 
           {/* Column 1: Daily Evolution Form (lg:col-span-6) */}
-          <div className="lg:col-span-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          {isMigraine && (
+            <div className="lg:col-span-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2 border-b border-slate-100 pb-3">
               <PlusCircle className="h-5 w-5 text-teal-600" />
               Meu Diário de Evolução
@@ -863,9 +865,10 @@ export default function PatientDashboard({
               </button>
             </form>
           </div>
+          )}
 
           {/* Column 2: Study Material & Guidelines (lg:col-span-6) */}
-          <div className="lg:col-span-6 space-y-6">
+          <div className={`${isMigraine ? 'lg:col-span-6' : 'w-full'} space-y-6`}>
 
             {/* Atendimento & Envio de Exames */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
