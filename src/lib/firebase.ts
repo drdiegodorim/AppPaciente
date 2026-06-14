@@ -7,9 +7,14 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth();
 
-// Initial session helper (clean no-op as we do not use client-side authentication from Firebase)
+// Initial session helper to establish an authenticated transport context for Firestore
 export const initFirebaseSession = async () => {
-  // No-op
+  try {
+    await signInAnonymously(auth);
+    console.log("Firebase anonymous session prepared successfully.");
+  } catch (error) {
+    console.error("Anonymous authentication skipped/failed", error);
+  }
 };
 
 // Test Connection to Firestore

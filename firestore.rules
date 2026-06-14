@@ -8,37 +8,38 @@ service cloud.firestore {
     }
 
     // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
     function isValidId(id) {
-      return id is string && id.size() <= 128;
+      return id is string && id.size() > 0 && id.size() <= 128;
     }
 
     // Patients collection rules
     match /patients/{patientId} {
-      allow get, list, write, create, update, delete: if isValidId(patientId);
+      allow read, write: if isValidId(patientId);
     }
 
     // Logs collection rules
     match /logs/{logId} {
-      allow get, list, write, create, update, delete: if isValidId(logId);
+      allow read, write: if isValidId(logId);
     }
 
     // Medication Confirmations collection rules
     match /medicationConfirmations/{confirmationId} {
-      allow get, list, write, create, update, delete: if isValidId(confirmationId);
+      allow read, write: if isValidId(confirmationId);
     }
 
     // Credentials collection rules
     match /credentials/{username} {
-      allow get, list, write, create, update, delete: if isValidId(username);
+      allow read, write: if isValidId(username);
     }
 
     // Doctors collection rules
     match /doctors/{doctorId} {
-      allow get, list, write, create, update, delete: if isValidId(doctorId);
+      allow read, write: if isValidId(doctorId);
+    }
+
+    // Test connection collection rules
+    match /test/{testId} {
+      allow read, write: if isValidId(testId);
     }
   }
 }
