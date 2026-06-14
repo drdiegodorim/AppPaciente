@@ -7,14 +7,9 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
 export const auth = getAuth();
 
-// Sign in anonymously immediately to satisfy isSignedIn() Firestore safety rules safely
+// Initial session helper (clean no-op as we do not use client-side authentication from Firebase)
 export const initFirebaseSession = async () => {
-  try {
-    await signInAnonymously(auth);
-    console.log("Firebase anonymous session initialized safely");
-  } catch (error) {
-    console.error("Firebase registration failure", error);
-  }
+  // No-op
 };
 
 // Test Connection to Firestore

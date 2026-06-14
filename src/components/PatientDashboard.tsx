@@ -143,8 +143,44 @@ export default function PatientDashboard({
   }, [currentPatient, onConfirmMedication]);
 
   const handleSubscribePush = async () => {
+    // Detect iOS and standalone status accurately
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isStandalone = (window.navigator as any).standalone === true || 
+                         window.matchMedia('(display-mode: standalone)').matches;
+
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      setPushError('Seu dispositivo ou navegador não suporta notificações Push em background.');
+      if (isIOS && !isStandalone) {
+        setPushError(
+          '📱 No iPhone (iOS), é necessário instalar o portal na sua Tela de Início para liberar alertas de segundo plano: 1. Toque em Compartilhar (ícone com quadrado e seta) ➡️ 2. Selecione "Adicionar à Tela de Início" ➡️ 3. Abra o app por lá para ativar os alarmes.'
+        );
+      } else {
+        // Fallback for standard inline/active browser notifications if PushManager is simply disabled or in preview environment
+        if ('Notification' in window) {
+          try {
+            setIsSubscribing(true);
+            const permission = await Notification.requestPermission();
+            setNotificationPermission(permission);
+            if (permission === 'granted') {
+              setSubscriptionSuccess(true);
+              setPushError(null);
+              setTimeout(() => {
+                setSubscriptionSuccess(null);
+                setShowPushModal(false);
+              }, 3500);
+              return;
+            } else {
+              setPushError('A permissão para alertas instantâneos foi recusada pelo navegador.');
+            }
+          } catch (e) {
+            setPushError('Este navegador/dispositivo não oferece suporte para receber notificações em background.');
+          } finally {
+            setIsSubscribing(false);
+          }
+        } else {
+          setPushError('Este dispositivo, navegador ou modo iFrame de teste não suporta notificações de bloqueio. Sugerimos usar o navegador Chrome ou Safari padrão do aparelho.');
+        }
+      }
       return;
     }
 

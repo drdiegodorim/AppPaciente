@@ -1,0 +1,22 @@
+{
+  "name": "Instituto Diego Dorim - Portal do Paciente",
+  "short_name": "Instituto Diego Dorim",
+  "description": "Portal de acompanhamento e lembrete de medicamentos do Instituto Diego Dorim",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0d9488",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/192/000000/medical-doctor.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/000000/medical-doctor.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

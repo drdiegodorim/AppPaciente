@@ -18,22 +18,22 @@ service cloud.firestore {
 
     // Patients collection rules
     match /patients/{patientId} {
-      allow get, list, write, create, update, delete: if isSignedIn() && isValidId(patientId);
+      allow get, list, write, create, update, delete: if isValidId(patientId);
     }
 
     // Logs collection rules
     match /logs/{logId} {
-      allow get, list, write, create, update, delete: if isSignedIn() && isValidId(logId);
+      allow get, list, write, create, update, delete: if isValidId(logId);
     }
 
     // Medication Confirmations collection rules
     match /medicationConfirmations/{confirmationId} {
-      allow get, list, write, create, update, delete: if isSignedIn() && isValidId(confirmationId);
+      allow get, list, write, create, update, delete: if isValidId(confirmationId);
     }
 
     // Credentials collection rules
     match /credentials/{username} {
-      allow get, list, write, create, update, delete: if isSignedIn() && isValidId(username);
+      allow get, list, write, create, update, delete: if isValidId(username);
     }
   }
 }
