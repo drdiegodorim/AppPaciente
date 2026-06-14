@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Catch-all safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    // Patients collection rules
+    match /patients/{patientId} {
+      allow get, list, write, create, update, delete: if isSignedIn() && isValidId(patientId);
+    }
+
+    // Logs collection rules
+    match /logs/{logId} {
+      allow get, list, write, create, update, delete: if isSignedIn() && isValidId(logId);
+    }
+
+    // Medication Confirmations collection rules
+    match /medicationConfirmations/{confirmationId} {
+      allow get, list, write, create, update, delete: if isSignedIn() && isValidId(confirmationId);
+    }
+
+    // Credentials collection rules
+    match /credentials/{username} {
+      allow get, list, write, create, update, delete: if isSignedIn() && isValidId(username);
+    }
+  }
+}

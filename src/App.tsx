@@ -1,10 +1,32 @@
 import { useState, useEffect } from 'react';
-import { Patient, TrackingEntry, UserSession, DiagnosticType, MedicationPrescription, MedicationConfirmation } from './types';
+import { 
+  collection, 
+  getDocs, 
+  setDoc, 
+  doc, 
+  deleteDoc, 
+  onSnapshot 
+} from 'firebase/firestore';
+import { 
+  db, 
+  initFirebaseSession, 
+  testConnection, 
+  handleFirestoreError, 
+  OperationType 
+} from './lib/firebase';
+import { 
+  Patient, 
+  TrackingEntry, 
+  UserSession, 
+  DiagnosticType, 
+  MedicationPrescription, 
+  MedicationConfirmation 
+} from './types';
 import LoginScreen from './components/LoginScreen';
 import DoctorDashboard from './components/DoctorDashboard';
 import PatientDashboard from './components/PatientDashboard';
 
-// Pre-populated medical database
+// Pre-populated medical database fallback seeding data
 const DIRECTORY_MOCK_PATIENTS: Patient[] = [
   {
     id: 'p1',
@@ -116,36 +138,20 @@ export default function App() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [logs, setLogs] = useState<TrackingEntry[]>([]);
   const [medicationConfirmations, setMedicationConfirmations] = useState<MedicationConfirmation[]>([]);
+  const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [session, setSession] = useState<UserSession | null>(null);
+  const [dbLoading, setDbLoading] = useState(true);
 
-  // Initialize from LocalStorage or Fallback Mock Data
-  useEffect(() => {
-    const savedPatients = localStorage.getItem('clinic_patients');
-    const savedLogs = localStorage.getItem('clinic_logs');
-    const savedConfirms = localStorage.getItem('clinic_medication_confirmations');
-
-    if (savedPatients) {
-      setPatients(JSON.parse(savedPatients));
-    } else {
-      setPatients(DIRECTORY_MOCK_PATIENTS);
-      localStorage.setItem('clinic_patients', JSON.stringify(DIRECTORY_MOCK_PATIENTS));
-    }
-
-    if (savedLogs) {
-      setLogs(JSON.parse(savedLogs));
-    } else {
-      setLogs(DIRECTORY_MOCK_LOGS);
-      localStorage.setItem('clinic_logs', JSON.stringify(DIRECTORY_MOCK_LOGS));
-    }
-
-    if (savedConfirms) {
-      setMedicationConfirmations(JSON.parse(savedConfirms));
-    }
-
-    // Default passwords for testing map
-    // Keep standard user credentials map in state or storage
-    const savedPasswords = localStorage.getItem('clinic_passwords');
-    if (!savedPasswords) {
+  // Core seeding helper for newly initialized Firestore projects
+  const seedDatabaseIfEmpty = async () => {
+    try {
+      console.log("Seeding clinical profiles on Firestore...");
+      for (const p of DIRECTORY_MOCK_PATIENTS) {
+        await setDoc(doc(db, 'patients', p.id), p);
+      }
+      for (const l of DIRECTORY_MOCK_LOGS) {
+        await setDoc(doc(db, 'logs', l.id), l);
+      }
       const initialPasswords: Record<string, string> = {
         'medico.care': 'senha123',
         'ana.silva': 'senha123',
@@ -153,17 +159,107 @@ export default function App() {
         'beatriz.costa': 'abc123',
         'joao.santos': 'abc123'
       };
-      localStorage.setItem('clinic_passwords', JSON.stringify(initialPasswords));
+      for (const [uname, pwd] of Object.entries(initialPasswords)) {
+        await setDoc(doc(db, 'credentials', uname), { username: uname, password: pwd });
+      }
+      console.log("Firestore seeding completed successfully!");
+    } catch (err) {
+      console.error("Clinical profile seeding failed", err);
     }
+  };
+
+  // Real-time Firestore synchronization
+  useEffect(() => {
+    const initDb = async () => {
+      try {
+        await initFirebaseSession();
+        await testConnection();
+
+        const qPatients = collection(db, 'patients');
+        const qLogs = collection(db, 'logs');
+        const qConfirms = collection(db, 'medicationConfirmations');
+        const qCredentials = collection(db, 'credentials');
+
+        // Check and Seed Database if Empty
+        const patientsSnap = await getDocs(qPatients);
+        if (patientsSnap.empty) {
+          await seedDatabaseIfEmpty();
+        }
+
+        // 1. Live Patients Listener
+        const unsubPatients = onSnapshot(qPatients, (snapshot) => {
+          const list: Patient[] = [];
+          snapshot.forEach((doc) => {
+            list.push(doc.data() as Patient);
+          });
+          setPatients(list);
+        }, (error) => {
+          handleFirestoreError(error, OperationType.GET, 'patients');
+        });
+
+        // 2. Live Logs Listener
+        const unsubLogs = onSnapshot(qLogs, (snapshot) => {
+          const list: TrackingEntry[] = [];
+          snapshot.forEach((doc) => {
+            list.push(doc.data() as TrackingEntry);
+          });
+          list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          setLogs(list);
+        }, (error) => {
+          handleFirestoreError(error, OperationType.GET, 'logs');
+        });
+
+        // 3. Live Medication Confirmations Listener
+        const unsubConfirms = onSnapshot(qConfirms, (snapshot) => {
+          const list: MedicationConfirmation[] = [];
+          snapshot.forEach((doc) => {
+            list.push(doc.data() as MedicationConfirmation);
+          });
+          list.sort((a, b) => new Date(b.confirmedAt).getTime() - new Date(a.confirmedAt).getTime());
+          setMedicationConfirmations(list);
+        }, (error) => {
+          handleFirestoreError(error, OperationType.GET, 'medicationConfirmations');
+        });
+
+        // 4. Live Credentials mapping listener
+        const unsubCredentials = onSnapshot(qCredentials, (snapshot) => {
+          const credMap: Record<string, string> = {};
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.username && data.password) {
+              credMap[data.username.trim().toLowerCase()] = data.password;
+            }
+          });
+          setCredentials(credMap);
+        }, (error) => {
+          handleFirestoreError(error, OperationType.GET, 'credentials');
+        });
+
+        setDbLoading(false);
+
+        return () => {
+          unsubPatients();
+          unsubLogs();
+          unsubConfirms();
+          unsubCredentials();
+        };
+
+      } catch (err) {
+        console.error("Firestore DB Link failure", err);
+        setDbLoading(false);
+      }
+    };
+
+    initDb();
   }, []);
 
   const handleLogin = (username: string, role: 'doctor' | 'patient', customPassword?: string): string | null => {
-    const savedPasswords = JSON.parse(localStorage.getItem('clinic_passwords') || '{}');
     const targetUser = username.trim().toLowerCase();
 
     // 1. Doctor Login
     if (role === 'doctor') {
-      if (targetUser === 'medico.care' && customPassword === savedPasswords['medico.care']) {
+      const savedDocPass = credentials['medico.care'] || 'senha123';
+      if (targetUser === 'medico.care' && customPassword === savedDocPass) {
         setSession({
           userId: 'doctor_admin',
           username: 'medico.care',
@@ -180,7 +276,7 @@ export default function App() {
       return 'Nome de usuário não localizado no cadastro do consultório.';
     }
 
-    const currentPass = savedPasswords[targetUser];
+    const currentPass = credentials[targetUser] || (targetPatient.requiresPasswordChange ? 'abc123' : 'senha123');
     if (customPassword === currentPass) {
       setSession({
         userId: targetPatient.id,
@@ -226,54 +322,49 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
 
-    const updatedPatients = [...patients, newPatient];
-    setPatients(updatedPatients);
-    localStorage.setItem('clinic_patients', JSON.stringify(updatedPatients));
+    // Optimistically write to firestore
+    setDoc(doc(db, 'patients', newPatient.id), newPatient)
+      .catch((err) => handleFirestoreError(err, OperationType.WRITE, `patients/${newPatient.id}`));
 
-    // Save their initial secret 'abc123'
-    const savedPasswords = JSON.parse(localStorage.getItem('clinic_passwords') || '{}');
-    savedPasswords[generatedUsername] = 'abc123';
-    localStorage.setItem('clinic_passwords', JSON.stringify(savedPasswords));
+    setDoc(doc(db, 'credentials', generatedUsername), { 
+      username: generatedUsername, 
+      password: 'abc123' 
+    }).catch((err) => handleFirestoreError(err, OperationType.WRITE, `credentials/${generatedUsername}`));
 
     return newPatient;
   };
 
-  const handleChangePassword = (newPass: string) => {
+  const handleChangePassword = async (newPass: string) => {
     if (!session || session.role !== 'patient' || !session.patientDetails) return;
 
     const currentPat = session.patientDetails;
     const patUsername = currentPat.username;
 
-    // 1. Update password in credentials mapping
-    const savedPasswords = JSON.parse(localStorage.getItem('clinic_passwords') || '{}');
-    savedPasswords[patUsername] = newPass;
-    localStorage.setItem('clinic_passwords', JSON.stringify(savedPasswords));
+    try {
+      // 1. Update password in credentials mapping
+      await setDoc(doc(db, 'credentials', patUsername), {
+        username: patUsername,
+        password: newPass
+      });
 
-    // 2. Clear requiresPasswordChange in patient's profile
-    const updatedPatients = patients.map((p) => {
-      if (p.id === currentPat.id) {
-        return {
-          ...p,
-          requiresPasswordChange: false
-        };
-      }
-      return p;
-    });
-
-    setPatients(updatedPatients);
-    localStorage.setItem('clinic_patients', JSON.stringify(updatedPatients));
-
-    // 3. Update active session too
-    setSession({
-      ...session,
-      patientDetails: {
+      // 2. Clear requiresPasswordChange in patient's profile
+      const updatedPatient = {
         ...currentPat,
         requiresPasswordChange: false
-      }
-    });
+      };
+      await setDoc(doc(db, 'patients', currentPat.id), updatedPatient);
+
+      // 3. Update active session too
+      setSession({
+        ...session,
+        patientDetails: updatedPatient
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `patients/${currentPat.id}`);
+    }
   };
 
-  const handleAddLog = (data: Record<string, any>, notes: string) => {
+  const handleAddLog = async (data: Record<string, any>, notes: string) => {
     if (!session || session.role !== 'patient' || !session.patientDetails) return;
 
     const currentPat = session.patientDetails;
@@ -286,45 +377,69 @@ export default function App() {
       notes: notes.trim() || undefined
     };
 
-    const updatedLogs = [newEntry, ...logs];
-    setLogs(updatedLogs);
-    localStorage.setItem('clinic_logs', JSON.stringify(updatedLogs));
-  };
-
-  const handleDeletePatient = (id: string) => {
-    const patientToDelete = patients.find((p) => p.id === id);
-    if (patientToDelete) {
-      const savedPasswords = JSON.parse(localStorage.getItem('clinic_passwords') || '{}');
-      delete savedPasswords[patientToDelete.username];
-      localStorage.setItem('clinic_passwords', JSON.stringify(savedPasswords));
+    try {
+      await setDoc(doc(db, 'logs', newEntry.id), newEntry);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `logs/${newEntry.id}`);
     }
-
-    const updatedPatients = patients.filter((p) => p.id !== id);
-    const updatedLogs = logs.filter((l) => l.patientId !== id);
-
-    setPatients(updatedPatients);
-    setLogs(updatedLogs);
-
-    localStorage.setItem('clinic_patients', JSON.stringify(updatedPatients));
-    localStorage.setItem('clinic_logs', JSON.stringify(updatedLogs));
   };
 
-  const handleUpdatePatientMedications = (patientId: string, medications: MedicationPrescription[]) => {
-    const updatedPatients = patients.map((p) => {
-      if (p.id === patientId) {
-        return { ...p, medications };
+  const handleDeletePatient = async (id: string) => {
+    const patientToDelete = patients.find((p) => p.id === id);
+    
+    try {
+      if (patientToDelete) {
+        await deleteDoc(doc(db, 'credentials', patientToDelete.username));
       }
-      return p;
-    });
-    setPatients(updatedPatients);
-    localStorage.setItem('clinic_patients', JSON.stringify(updatedPatients));
+      await deleteDoc(doc(db, 'patients', id));
+
+      // Cascade delete logs
+      const associatedLogs = logs.filter((l) => l.patientId === id);
+      for (const logToDel of associatedLogs) {
+        await deleteDoc(doc(db, 'logs', logToDel.id));
+      }
+
+      // Cascade delete confirmations
+      const associatedConfirms = medicationConfirmations.filter((mc) => mc.patientId === id);
+      for (const conf of associatedConfirms) {
+        await deleteDoc(doc(db, 'medicationConfirmations', conf.id));
+      }
+
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `patients/${id}`);
+    }
   };
 
-  const handleConfirmMedication = (confirmation: MedicationConfirmation) => {
-    const updatedConfirmations = [confirmation, ...medicationConfirmations];
-    setMedicationConfirmations(updatedConfirmations);
-    localStorage.setItem('clinic_medication_confirmations', JSON.stringify(updatedConfirmations));
+  const handleUpdatePatientMedications = async (patientId: string, medications: MedicationPrescription[]) => {
+    const pToUpdate = patients.find((p) => p.id === patientId);
+    if (!pToUpdate) return;
+
+    try {
+      await setDoc(doc(db, 'patients', patientId), {
+        ...pToUpdate,
+        medications
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `patients/${patientId}`);
+    }
   };
+
+  const handleConfirmMedication = async (confirmation: MedicationConfirmation) => {
+    try {
+      await setDoc(doc(db, 'medicationConfirmations', confirmation.id), confirmation);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `medicationConfirmations/${confirmation.id}`);
+    }
+  };
+
+  if (dbLoading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 gap-4 font-sans">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-300 border-t-teal-600" />
+        <p className="text-sm font-semibold text-slate-600 animate-pulse">Conectando ao Banco de Dados...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 selection:bg-teal-500 selection:text-white">

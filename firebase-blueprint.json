@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "patient": {
+      "title": "Patient Profile",
+      "description": "Patient general details and prescribed medications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "username": { "type": "string" },
+        "diagnostic": { "type": "string" },
+        "requiresPasswordChange": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "firstName", "lastName", "username", "diagnostic", "requiresPasswordChange", "createdAt"]
+    },
+    "tracking_entry": {
+      "title": "Tracking Entry Log",
+      "description": "Daily symptoms and exercises logged by patients",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientId": { "type": "string" },
+        "diagnostic": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "data": { "type": "object" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "patientId", "diagnostic", "timestamp", "data"]
+    },
+    "medication_confirmation": {
+      "title": "Medication Confirmation Log",
+      "description": "Logged when patient confirms they took a specific medication",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientId": { "type": "string" },
+        "medicationId": { "type": "string" },
+        "medicationName": { "type": "string" },
+        "dosage": { "type": "string" },
+        "prescribedTime": { "type": "string" },
+        "confirmedAt": { "type": "string" }
+      },
+      "required": ["id", "patientId", "medicationId", "medicationName", "dosage", "prescribedTime", "confirmedAt"]
+    },
+    "credential": {
+      "title": "Patient Credentials",
+      "description": "Holds credentials for the patient",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "password": { "type": "string" }
+      },
+      "required": ["username", "password"]
+    }
+  },
+  "firestore": {
+    "patients": {
+      "schema": "patient",
+      "description": "List of registered patients in the clinic"
+    },
+    "logs": {
+      "schema": "tracking_entry",
+      "description": "Daily symptom tracker logs"
+    },
+    "medicationConfirmations": {
+      "schema": "medication_confirmation",
+      "description": "Confirmed medication times logged by patients"
+    },
+    "credentials": {
+      "schema": "credential",
+      "description": "Safe reference store for clinical sandbox login"
+    }
+  }
+}
