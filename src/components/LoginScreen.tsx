@@ -211,8 +211,7 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor }: Log
                       Seu usuário de acesso é: <strong className="text-teal-700 font-mono text-sm">{registeredDocUsername}</strong>
                     </p>
                     <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-                      Efetue o login utilizando a senha provisória padrão: <strong className="font-mono text-teal-700">abc123</strong>.
-                      O sistema exigirá a troca por um código forte no primeiro acesso.
+                      Efetue o login utilizando a senha padrão: <strong className="font-mono text-teal-700">abc123</strong>.
                     </p>
                   </div>
                   <button

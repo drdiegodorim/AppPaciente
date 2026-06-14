@@ -26,7 +26,6 @@ import {
 import LoginScreen from './components/LoginScreen';
 import DoctorDashboard from './components/DoctorDashboard';
 import PatientDashboard from './components/PatientDashboard';
-import DoctorForcePasswordChange from './components/DoctorForcePasswordChange';
 
 // Pre-populated medical database fallback seeding data
 const DIRECTORY_MOCK_PATIENTS: Patient[] = [
@@ -156,9 +155,9 @@ export default function App() {
         await setDoc(doc(db, 'logs', l.id), l);
       }
       const initialPasswords: Record<string, string> = {
-        'medico.care': 'senha123',
-        'ana.silva': 'senha123',
-        'carlos.oliveira': 'senha123',
+        'medico.care': 'abc123',
+        'ana.silva': 'abc123',
+        'carlos.oliveira': 'abc123',
         'beatriz.costa': 'abc123',
         'joao.santos': 'abc123'
       };
@@ -287,7 +286,7 @@ export default function App() {
 
     // 1. Doctor Login
     if (role === 'doctor') {
-      const savedDocPass = credentials[targetUser] || (targetUser === 'medico.care' ? 'senha123' : null);
+      const savedDocPass = credentials[targetUser] || (targetUser === 'medico.care' ? 'abc123' : null);
       if (!savedDocPass) {
         const targetDoctor = doctors.find((d) => d.username === targetUser);
         if (!targetDoctor) {
@@ -310,7 +309,7 @@ export default function App() {
         return 'Dados de acesso do médico não puderam ser localizados.';
       }
 
-      const expectedPassword = credentials[targetUser] || (targetDoctor.requiresPasswordChange ? 'abc123' : 'senha123');
+      const expectedPassword = credentials[targetUser] || 'abc123';
       if (customPassword === expectedPassword) {
         setSession({
           userId: targetDoctor.id,
@@ -329,7 +328,7 @@ export default function App() {
       return 'Nome de usuário não localizado no cadastro do consultório.';
     }
 
-    const currentPass = credentials[targetUser] || (targetPatient.requiresPasswordChange ? 'abc123' : 'senha123');
+    const currentPass = credentials[targetUser] || 'abc123';
     if (customPassword === currentPass) {
       setSession({
         userId: targetPatient.id,
@@ -376,7 +375,7 @@ export default function App() {
       username: generatedUsername,
       email: email.trim(),
       crm: crm.trim(),
-      requiresPasswordChange: true,
+      requiresPasswordChange: false,
       createdAt: new Date().toISOString()
     };
 
@@ -421,7 +420,7 @@ export default function App() {
       lastName: lastName.trim(),
       username: generatedUsername,
       diagnostic,
-      requiresPasswordChange: true, // MUST change on first login
+      requiresPasswordChange: false,
       createdAt: new Date().toISOString()
     };
 
@@ -593,23 +592,15 @@ export default function App() {
       {!session ? (
         <LoginScreen onLogin={handleLogin} patients={patients} onRegisterDoctor={handleRegisterDoctor} />
       ) : session.role === 'doctor' ? (
-        session.doctorDetails?.requiresPasswordChange ? (
-          <DoctorForcePasswordChange
-            doctor={session.doctorDetails}
-            onChangePassword={handleDoctorChangePassword}
-            onLogout={handleLogout}
-          />
-        ) : (
-          <DoctorDashboard
-            patients={patients}
-            logs={logs}
-            medicationConfirmations={medicationConfirmations}
-            onUpdatePatientMedications={handleUpdatePatientMedications}
-            onAddPatient={handleAddPatient}
-            onDeletePatient={handleDeletePatient}
-            onLogout={handleLogout}
-          />
-        )
+        <DoctorDashboard
+          patients={patients}
+          logs={logs}
+          medicationConfirmations={medicationConfirmations}
+          onUpdatePatientMedications={handleUpdatePatientMedications}
+          onAddPatient={handleAddPatient}
+          onDeletePatient={handleDeletePatient}
+          onLogout={handleLogout}
+        />
       ) : (
         session.patientDetails && (
           <PatientDashboard

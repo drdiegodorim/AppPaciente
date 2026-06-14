@@ -433,7 +433,7 @@ export default function PatientDashboard({
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   // FORCE PASSWORD CHANGE ON FIRST ACCESS
-  if (currentPatient.requiresPasswordChange) {
+  if (false && currentPatient.requiresPasswordChange) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8 font-sans">
         <div className="w-full max-w-md space-y-8 bg-white p-8 shadow-md rounded-2xl border border-slate-200">
