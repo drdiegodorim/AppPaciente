@@ -53,12 +53,32 @@
         "password": { "type": "string" }
       },
       "required": ["username", "password"]
+    },
+    "doctor": {
+      "title": "Doctor Profile",
+      "description": "Doctor registration details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "crm": { "type": "string" },
+        "requiresPasswordChange": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "firstName", "lastName", "username", "email", "crm", "requiresPasswordChange", "createdAt"]
     }
   },
   "firestore": {
     "patients": {
       "schema": "patient",
       "description": "List of registered patients in the clinic"
+    },
+    "doctors": {
+      "schema": "doctor",
+      "description": "List of registered doctors in the clinic"
     },
     "logs": {
       "schema": "tracking_entry",

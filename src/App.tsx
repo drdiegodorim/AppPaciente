@@ -20,11 +20,13 @@ import {
   UserSession, 
   DiagnosticType, 
   MedicationPrescription, 
-  MedicationConfirmation 
+  MedicationConfirmation,
+  Doctor
 } from './types';
 import LoginScreen from './components/LoginScreen';
 import DoctorDashboard from './components/DoctorDashboard';
 import PatientDashboard from './components/PatientDashboard';
+import DoctorForcePasswordChange from './components/DoctorForcePasswordChange';
 
 // Pre-populated medical database fallback seeding data
 const DIRECTORY_MOCK_PATIENTS: Patient[] = [
@@ -136,6 +138,7 @@ const DIRECTORY_MOCK_LOGS: TrackingEntry[] = [
 
 export default function App() {
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [logs, setLogs] = useState<TrackingEntry[]>([]);
   const [medicationConfirmations, setMedicationConfirmations] = useState<MedicationConfirmation[]>([]);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
@@ -176,6 +179,7 @@ export default function App() {
         await testConnection();
 
         const qPatients = collection(db, 'patients');
+        const qDoctors = collection(db, 'doctors');
         const qLogs = collection(db, 'logs');
         const qConfirms = collection(db, 'medicationConfirmations');
         const qCredentials = collection(db, 'credentials');
@@ -195,6 +199,17 @@ export default function App() {
           setPatients(list);
         }, (error) => {
           handleFirestoreError(error, OperationType.GET, 'patients');
+        });
+
+        // 1.5 Live Doctors Listener
+        const unsubDoctors = onSnapshot(qDoctors, (snapshot) => {
+          const list: Doctor[] = [];
+          snapshot.forEach((doc) => {
+            list.push(doc.data() as Doctor);
+          });
+          setDoctors(list);
+        }, (error) => {
+          handleFirestoreError(error, OperationType.GET, 'doctors');
         });
 
         // 2. Live Logs Listener
@@ -239,6 +254,7 @@ export default function App() {
 
         return () => {
           unsubPatients();
+          unsubDoctors();
           unsubLogs();
           unsubConfirms();
           unsubCredentials();
@@ -258,16 +274,40 @@ export default function App() {
 
     // 1. Doctor Login
     if (role === 'doctor') {
-      const savedDocPass = credentials['medico.care'] || 'senha123';
-      if (targetUser === 'medico.care' && customPassword === savedDocPass) {
+      const savedDocPass = credentials[targetUser] || (targetUser === 'medico.care' ? 'senha123' : null);
+      if (!savedDocPass) {
+        const targetDoctor = doctors.find((d) => d.username === targetUser);
+        if (!targetDoctor) {
+          return 'Nome de usuário médico não localizado no cadastro do consultório.';
+        }
+      }
+
+      const targetDoctor = doctors.find((d) => d.username === targetUser) || (targetUser === 'medico.care' ? {
+        id: 'doctor_admin',
+        firstName: 'Diego',
+        lastName: 'Dorim',
+        username: 'medico.care',
+        email: 'diego@dorim.com',
+        crm: '123456-SP',
+        requiresPasswordChange: false,
+        createdAt: new Date().toISOString()
+      } : null);
+
+      if (!targetDoctor) {
+        return 'Dados de acesso do médico não puderam ser localizados.';
+      }
+
+      const expectedPassword = credentials[targetUser] || (targetDoctor.requiresPasswordChange ? 'abc123' : 'senha123');
+      if (customPassword === expectedPassword) {
         setSession({
-          userId: 'doctor_admin',
-          username: 'medico.care',
-          role: 'doctor'
+          userId: targetDoctor.id,
+          username: targetDoctor.username,
+          role: 'doctor',
+          doctorDetails: targetDoctor
         });
         return null;
       }
-      return 'Dados de acesso médico incorretos.';
+      return 'Senha incorreta para acesso médico.';
     }
 
     // 2. Patient Login
@@ -292,6 +332,56 @@ export default function App() {
 
   const handleLogout = () => {
     setSession(null);
+  };
+
+  const handleRegisterDoctor = async (
+    firstName: string,
+    lastName: string,
+    email: string,
+    crm: string
+  ): Promise<Doctor> => {
+    const cleanFirst = firstName
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+
+    const cleanLast = lastName
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+
+    const generatedUsername = `${cleanFirst}.${cleanLast}`;
+
+    const newDoctor: Doctor = {
+      id: 'doc_' + Date.now(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      username: generatedUsername,
+      email: email.trim(),
+      crm: crm.trim(),
+      requiresPasswordChange: true,
+      createdAt: new Date().toISOString()
+    };
+
+    // Optimistic state updates (SAFEGUARD - guarantees immediate local availability for login)
+    setDoctors((prev) => [...prev, newDoctor]);
+    setCredentials((prev) => ({
+      ...prev,
+      [generatedUsername]: 'abc123'
+    }));
+
+    // Async write on Firestore
+    await setDoc(doc(db, 'doctors', newDoctor.id), newDoctor);
+    await setDoc(doc(db, 'credentials', generatedUsername), { 
+      username: generatedUsername, 
+      password: 'abc123' 
+    });
+
+    return newDoctor;
   };
 
   const handleAddPatient = (firstName: string, lastName: string, diagnostic: DiagnosticType): Patient => {
@@ -322,7 +412,14 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
 
-    // Optimistically write to firestore
+    // Optimistic state updates (SAFEGUARD - guarantees immediate local availability for login)
+    setPatients((prev) => [...prev, newPatient]);
+    setCredentials((prev) => ({
+      ...prev,
+      [generatedUsername]: 'abc123'
+    }));
+
+    // Write to firestore in background
     setDoc(doc(db, 'patients', newPatient.id), newPatient)
       .catch((err) => handleFirestoreError(err, OperationType.WRITE, `patients/${newPatient.id}`));
 
@@ -361,6 +458,43 @@ export default function App() {
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `patients/${currentPat.id}`);
+    }
+  };
+
+  const handleDoctorChangePassword = async (newPass: string) => {
+    if (!session || session.role !== 'doctor' || !session.doctorDetails) return;
+
+    const currentDoc = session.doctorDetails;
+    const docUsername = currentDoc.username;
+
+    try {
+      // 1. Update password in credentials mapping
+      await setDoc(doc(db, 'credentials', docUsername), {
+        username: docUsername,
+        password: newPass
+      });
+
+      // 2. Clear requiresPasswordChange in doctor's profile
+      const updatedDoctor: Doctor = {
+        ...currentDoc,
+        requiresPasswordChange: false
+      };
+      await setDoc(doc(db, 'doctors', currentDoc.id), updatedDoctor);
+
+      // 3. Update local state optimistically
+      setDoctors((prev) => prev.map((d) => d.id === currentDoc.id ? updatedDoctor : d));
+      setCredentials((prev) => ({
+        ...prev,
+        [docUsername]: newPass
+      }));
+
+      // 4. Update active session too
+      setSession({
+        ...session,
+        doctorDetails: updatedDoctor
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `doctors/${currentDoc.id}`);
     }
   };
 
@@ -444,17 +578,25 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 selection:bg-teal-500 selection:text-white">
       {!session ? (
-        <LoginScreen onLogin={handleLogin} patients={patients} />
+        <LoginScreen onLogin={handleLogin} patients={patients} onRegisterDoctor={handleRegisterDoctor} />
       ) : session.role === 'doctor' ? (
-        <DoctorDashboard
-          patients={patients}
-          logs={logs}
-          medicationConfirmations={medicationConfirmations}
-          onUpdatePatientMedications={handleUpdatePatientMedications}
-          onAddPatient={handleAddPatient}
-          onDeletePatient={handleDeletePatient}
-          onLogout={handleLogout}
-        />
+        session.doctorDetails?.requiresPasswordChange ? (
+          <DoctorForcePasswordChange
+            doctor={session.doctorDetails}
+            onChangePassword={handleDoctorChangePassword}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <DoctorDashboard
+            patients={patients}
+            logs={logs}
+            medicationConfirmations={medicationConfirmations}
+            onUpdatePatientMedications={handleUpdatePatientMedications}
+            onAddPatient={handleAddPatient}
+            onDeletePatient={handleDeletePatient}
+            onLogout={handleLogout}
+          />
+        )
       ) : (
         session.patientDetails && (
           <PatientDashboard

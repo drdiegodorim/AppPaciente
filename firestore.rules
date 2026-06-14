@@ -35,5 +35,10 @@ service cloud.firestore {
     match /credentials/{username} {
       allow get, list, write, create, update, delete: if isValidId(username);
     }
+
+    // Doctors collection rules
+    match /doctors/{doctorId} {
+      allow get, list, write, create, update, delete: if isValidId(doctorId);
+    }
   }
 }

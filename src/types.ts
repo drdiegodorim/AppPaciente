@@ -66,11 +66,23 @@ export interface Patient {
   medications?: MedicationPrescription[];
 }
 
+export interface Doctor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  username: string; // nome.sobrenome
+  email: string;
+  crm: string; // CRM com estado
+  requiresPasswordChange: boolean;
+  createdAt: string;
+}
+
 export interface UserSession {
   userId: string;
   username: string;
   role: 'doctor' | 'patient';
   patientDetails?: Patient;
+  doctorDetails?: Doctor;
 }
 
 export interface TrackingEntry {
