@@ -269,6 +269,19 @@ export default function App() {
     initDb();
   }, []);
 
+  // Register Service worker globally on mount to enable PWA support early
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => {
+          console.log('Global Service Worker registered on app boot!', reg.scope);
+        })
+        .catch((err) => {
+          console.error('Global Service Worker registration skipped/failed:', err);
+        });
+    }
+  }, []);
+
   const handleLogin = (username: string, role: 'doctor' | 'patient', customPassword?: string): string | null => {
     const targetUser = username.trim().toLowerCase();
 

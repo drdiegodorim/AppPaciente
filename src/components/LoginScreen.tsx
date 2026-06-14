@@ -1,5 +1,5 @@
-import React, { useState, FormEvent } from 'react';
-import { Shield, User, Key, Check, Info, Mail, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, FormEvent } from 'react';
+import { Shield, User, Key, Check, Info, Mail, ArrowLeft, Smartphone, Download, Share2, PlusSquare } from 'lucide-react';
 import { Patient, Doctor } from '../types';
 
 interface LoginScreenProps {
@@ -24,6 +24,49 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor }: Log
   const [docRegSuccess, setDocRegSuccess] = useState<boolean>(false);
   const [registeredDocUsername, setRegisteredDocUsername] = useState('');
   const [isRegisteringLoading, setIsRegisteringLoading] = useState(false);
+
+  // PWA Install states
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [showHowToInstall, setShowHowToInstall] = useState(false);
+
+  useEffect(() => {
+    // Check if app is already running as an installed PWA
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
+      setIsInstalled(true);
+    }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+        setDeferredPrompt(null);
+      }
+    } else {
+      setShowHowToInstall(!showHowToInstall);
+    }
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -381,6 +424,78 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor }: Log
           )}
         </div>
 
+        {/* PWA Installation Assistant Card */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-md p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-teal-50 p-2 text-teal-600 shrink-0">
+              <Smartphone className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-slate-800 text-sm">Instalar Aplicativo de Saúde</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Adicione o Portal do Paciente à tela inicial do seu celular para receber lembretes imediatos e abrir sem usar o navegador.
+              </p>
+            </div>
+          </div>
+
+          {isInstalled ? (
+            <div className="rounded-xl bg-emerald-50 p-3 border border-emerald-100 text-center flex items-center justify-center gap-2 text-xs font-semibold text-emerald-800">
+              <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>Você já está usando o aplicativo instalado (PWA) no celular!</span>
+            </div>
+          ) : (
+            <>
+              {deferredPrompt ? (
+                <button
+                  type="button"
+                  onClick={handleInstallClick}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 py-3 text-xs font-bold text-white transition shadow-md shadow-teal-600/15 cursor-pointer animate-pulse"
+                >
+                  <Download className="h-4 w-4" />
+                  Instalar Aplicativo (Adicionar à Tela Principal)
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowHowToInstall(!showHowToInstall)}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 py-2.5 text-xs font-semibold text-slate-700 transition cursor-pointer"
+                >
+                  <Smartphone className="h-4 w-4 text-slate-500" />
+                  {showHowToInstall ? 'Ocultar caminho de instalação' : 'Como Adicionar na Tela Inicial do Celular?'}
+                </button>
+              )}
+
+              {/* Guided Tutorial Instructions */}
+              {showHowToInstall && (
+                <div className="mt-2 border-t border-slate-100 pt-3 space-y-3.5 text-xs text-slate-600 leading-relaxed">
+                  <div className="space-y-1.5">
+                    <p className="font-bold text-teal-800 flex items-center gap-1.5">
+                      <span className="text-base">📱</span> no iPhone (Navegador Safari):
+                    </p>
+                    <ol className="list-decimal pl-4.5 space-y-1 text-slate-500">
+                      <li>Abra este site utilizando o navegador original <strong className="text-slate-700">Safari</strong>.</li>
+                      <li>Toque no botão de <strong className="text-teal-700">Compartilhar</strong> <Share2 className="inline h-3.5 w-3.5 mx-0.5 text-teal-600 pointer-events-none" /> (retângulo com seta para cima no rodapé).</li>
+                      <li>Role as opções para baixo e toque em <strong className="text-teal-700">"Adicionar à Tela de Início"</strong> <PlusSquare className="inline h-3.5 w-3.5 mx-0.5 text-teal-600 pointer-events-none" />.</li>
+                      <li>Toque em <strong className="text-teal-700">"Adicionar"</strong> no canto superior direito. Pronto!</li>
+                    </ol>
+                  </div>
+
+                  <div className="space-y-1.5 pt-2 border-t border-dashed border-slate-100">
+                    <p className="font-bold text-teal-800 flex items-center gap-1.5">
+                      <span className="text-base">🤖</span> no Android (Navegador Google Chrome):
+                    </p>
+                    <ol className="list-decimal pl-4.5 space-y-1 text-slate-500">
+                      <li>Abra este site no <strong className="text-slate-700">Google Chrome</strong>.</li>
+                      <li>Toque nos <strong className="text-slate-700">três pontinhos</strong> no canto superior direito.</li>
+                      <li>Selecione a opção <strong className="text-teal-700">"Instalar aplicativo"</strong> ou <strong className="text-teal-700">"Adicionar à tela inicial"</strong>.</li>
+                      <li>Confirme a instalação e o app estará pronto no menu principal.</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
       </div>
     </div>
