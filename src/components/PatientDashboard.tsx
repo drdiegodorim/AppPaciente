@@ -41,7 +41,7 @@ interface PatientDashboardProps {
   logs: TrackingEntry[];
   medicationConfirmations: MedicationConfirmation[];
   onConfirmMedication: (confirmation: MedicationConfirmation) => void;
-  onChangePassword: (newPass: string) => void;
+  onChangePassword: (newPass: string) => Promise<void>;
   onAddLog: (data: Record<string, any>, notes: string) => void;
   onLogout: () => void;
 }
@@ -59,6 +59,7 @@ export default function PatientDashboard({
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
   // Exam Upload States
   const [isDragActive, setIsDragActive] = useState(false);
@@ -330,7 +331,7 @@ export default function PatientDashboard({
 
 
 
-  const handlePasswordSubmit = (e: FormEvent) => {
+  const handlePasswordSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
 
@@ -347,7 +348,23 @@ export default function PatientDashboard({
       return;
     }
 
-    onChangePassword(newPassword);
+    setIsPasswordLoading(true);
+    try {
+      await onChangePassword(newPassword);
+    } catch (err: any) {
+      let friendlyError = 'Ocorreu um erro ao salvar sua nova senha no servidor.';
+      if (err instanceof Error) {
+        try {
+          const detail = JSON.parse(err.message);
+          if (detail.error) friendlyError = `Erro no banco: ${detail.error}`;
+        } catch {
+          friendlyError = err.message;
+        }
+      }
+      setPasswordError(friendlyError);
+    } finally {
+      setIsPasswordLoading(false);
+    }
   };
 
   const handleLogSubmit = (e: FormEvent) => {
@@ -470,9 +487,10 @@ export default function PatientDashboard({
 
             <button
               type="submit"
-              className="w-full flex justify-center rounded-xl bg-teal-600 py-3 px-4 text-sm font-semibold text-white hover:bg-teal-700 transition shadow-md shadow-teal-600/10"
+              disabled={isPasswordLoading}
+              className="w-full flex justify-center rounded-xl bg-teal-600 disabled:bg-slate-300 py-3 px-4 text-sm font-semibold text-white hover:bg-teal-700 transition shadow-md shadow-teal-600/10 cursor-pointer"
             >
-              Definir Nova Senha & Começar
+              {isPasswordLoading ? 'Gravando Nova Senha...' : 'Definir Nova Senha & Começar'}
             </button>
 
             <button
