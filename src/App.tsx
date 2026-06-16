@@ -136,11 +136,46 @@ const DIRECTORY_MOCK_LOGS: TrackingEntry[] = [
 ];
 
 export default function App() {
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [logs, setLogs] = useState<TrackingEntry[]>([]);
-  const [medicationConfirmations, setMedicationConfirmations] = useState<MedicationConfirmation[]>([]);
-  const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [patients, setPatients] = useState<Patient[]>(() => {
+    try {
+      const saved = localStorage.getItem('clinical_patients');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [doctors, setDoctors] = useState<Doctor[]>(() => {
+    try {
+      const saved = localStorage.getItem('clinical_doctors');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [logs, setLogs] = useState<TrackingEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem('clinical_logs');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [medicationConfirmations, setMedicationConfirmations] = useState<MedicationConfirmation[]>(() => {
+    try {
+      const saved = localStorage.getItem('clinical_confirmations');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [credentials, setCredentials] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem('clinical_credentials');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [session, setSession] = useState<UserSession | null>(null);
   const [dbLoading, setDbLoading] = useState(true);
 
@@ -151,9 +186,21 @@ export default function App() {
       for (const p of DIRECTORY_MOCK_PATIENTS) {
         await setDoc(doc(db, 'patients', p.id), p);
       }
+      try {
+        localStorage.setItem('clinical_patients', JSON.stringify(DIRECTORY_MOCK_PATIENTS));
+      } catch (e) {
+        console.error(e);
+      }
+
       for (const l of DIRECTORY_MOCK_LOGS) {
         await setDoc(doc(db, 'logs', l.id), l);
       }
+      try {
+        localStorage.setItem('clinical_logs', JSON.stringify(DIRECTORY_MOCK_LOGS));
+      } catch (e) {
+        console.error(e);
+      }
+
       const initialPasswords: Record<string, string> = {
         'medico.care': 'abc123',
         'ana.silva': 'abc123',
@@ -164,6 +211,12 @@ export default function App() {
       for (const [uname, pwd] of Object.entries(initialPasswords)) {
         await setDoc(doc(db, 'credentials', uname), { username: uname, password: pwd });
       }
+      try {
+        localStorage.setItem('clinical_credentials', JSON.stringify(initialPasswords));
+      } catch (e) {
+        console.error(e);
+      }
+
       console.log("Firestore seeding completed successfully!");
     } catch (err) {
       console.error("Clinical profile seeding failed", err);
@@ -172,10 +225,25 @@ export default function App() {
 
   // Real-time Firestore synchronization
   useEffect(() => {
+    let unsubPatients: (() => void) | undefined;
+    let unsubDoctors: (() => void) | undefined;
+    let unsubLogs: (() => void) | undefined;
+    let unsubConfirms: (() => void) | undefined;
+    let unsubCredentials: (() => void) | undefined;
+
     const initDb = async () => {
       try {
-        await initFirebaseSession();
-        await testConnection();
+        try {
+          await initFirebaseSession();
+        } catch (e) {
+          console.warn("initFirebaseSession handled offline:", e);
+        }
+
+        try {
+          await testConnection();
+        } catch (e) {
+          console.warn("testConnection handled offline:", e);
+        }
 
         const qPatients = collection(db, 'patients');
         const qDoctors = collection(db, 'doctors');
@@ -183,60 +251,84 @@ export default function App() {
         const qConfirms = collection(db, 'medicationConfirmations');
         const qCredentials = collection(db, 'credentials');
 
-        // Check and Seed Database if Empty
-        const patientsSnap = await getDocs(qPatients);
-        if (patientsSnap.empty) {
-          await seedDatabaseIfEmpty();
+        // Check and Seed Database if Empty in background
+        try {
+          const patientsSnap = await getDocs(qPatients);
+          if (patientsSnap.empty) {
+            await seedDatabaseIfEmpty();
+          }
+        } catch (seedErr) {
+          console.warn("Seeding check skipped or handled offline", seedErr);
         }
 
         // 1. Live Patients Listener
-        const unsubPatients = onSnapshot(qPatients, (snapshot) => {
+        unsubPatients = onSnapshot(qPatients, (snapshot) => {
           const list: Patient[] = [];
           snapshot.forEach((doc) => {
             list.push(doc.data() as Patient);
           });
           setPatients(list);
+          try {
+            localStorage.setItem('clinical_patients', JSON.stringify(list));
+          } catch (e) {
+            console.error(e);
+          }
         }, (error) => {
-          handleFirestoreError(error, OperationType.GET, 'patients');
+          console.warn("Firestore error reading patients:", error);
         });
 
         // 1.5 Live Doctors Listener
-        const unsubDoctors = onSnapshot(qDoctors, (snapshot) => {
+        unsubDoctors = onSnapshot(qDoctors, (snapshot) => {
           const list: Doctor[] = [];
           snapshot.forEach((doc) => {
             list.push(doc.data() as Doctor);
           });
           setDoctors(list);
+          try {
+            localStorage.setItem('clinical_doctors', JSON.stringify(list));
+          } catch (e) {
+            console.error(e);
+          }
         }, (error) => {
-          handleFirestoreError(error, OperationType.GET, 'doctors');
+          console.warn("Firestore error reading doctors:", error);
         });
 
         // 2. Live Logs Listener
-        const unsubLogs = onSnapshot(qLogs, (snapshot) => {
+        unsubLogs = onSnapshot(qLogs, (snapshot) => {
           const list: TrackingEntry[] = [];
           snapshot.forEach((doc) => {
             list.push(doc.data() as TrackingEntry);
           });
           list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
           setLogs(list);
+          try {
+            localStorage.setItem('clinical_logs', JSON.stringify(list));
+          } catch (e) {
+            console.error(e);
+          }
         }, (error) => {
-          handleFirestoreError(error, OperationType.GET, 'logs');
+          console.warn("Firestore error reading logs:", error);
         });
 
         // 3. Live Medication Confirmations Listener
-        const unsubConfirms = onSnapshot(qConfirms, (snapshot) => {
+        unsubConfirms = onSnapshot(qConfirms, (snapshot) => {
           const list: MedicationConfirmation[] = [];
           snapshot.forEach((doc) => {
             list.push(doc.data() as MedicationConfirmation);
           });
           list.sort((a, b) => new Date(b.confirmedAt).getTime() - new Date(a.confirmedAt).getTime());
           setMedicationConfirmations(list);
+          try {
+            localStorage.setItem('clinical_confirmations', JSON.stringify(list));
+          } catch (e) {
+            console.error(e);
+          }
         }, (error) => {
-          handleFirestoreError(error, OperationType.GET, 'medicationConfirmations');
+          console.warn("Firestore error reading medicationConfirmations:", error);
         });
 
         // 4. Live Credentials mapping listener
-        const unsubCredentials = onSnapshot(qCredentials, (snapshot) => {
+        unsubCredentials = onSnapshot(qCredentials, (snapshot) => {
           const credMap: Record<string, string> = {};
           snapshot.forEach((doc) => {
             const data = doc.data();
@@ -245,19 +337,16 @@ export default function App() {
             }
           });
           setCredentials(credMap);
+          try {
+            localStorage.setItem('clinical_credentials', JSON.stringify(credMap));
+          } catch (e) {
+            console.error(e);
+          }
         }, (error) => {
-          handleFirestoreError(error, OperationType.GET, 'credentials');
+          console.warn("Firestore error reading credentials:", error);
         });
 
         setDbLoading(false);
-
-        return () => {
-          unsubPatients();
-          unsubDoctors();
-          unsubLogs();
-          unsubConfirms();
-          unsubCredentials();
-        };
 
       } catch (err) {
         console.error("Firestore DB Link failure", err);
@@ -266,6 +355,14 @@ export default function App() {
     };
 
     initDb();
+
+    return () => {
+      if (unsubPatients) unsubPatients();
+      if (unsubDoctors) unsubDoctors();
+      if (unsubLogs) unsubLogs();
+      if (unsubConfirms) unsubConfirms();
+      if (unsubCredentials) unsubCredentials();
+    };
   }, []);
 
   // Register Service worker globally on mount to enable PWA support early
@@ -379,19 +476,36 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
 
-    // Optimistic state updates (SAFEGUARD - guarantees immediate local availability for login)
-    setDoctors((prev) => [...prev, newDoctor]);
-    setCredentials((prev) => ({
-      ...prev,
+    // Synchronous LocalStorage & Optimistic React State update (guarantees persistence across logouts/reloads)
+    const updatedDocs = [...doctors, newDoctor];
+    setDoctors(updatedDocs);
+    try {
+      localStorage.setItem('clinical_doctors', JSON.stringify(updatedDocs));
+    } catch (e) {
+      console.error(e);
+    }
+
+    const updatedCreds = {
+      ...credentials,
       [generatedUsername]: 'abc123'
-    }));
+    };
+    setCredentials(updatedCreds);
+    try {
+      localStorage.setItem('clinical_credentials', JSON.stringify(updatedCreds));
+    } catch (e) {
+      console.error(e);
+    }
 
     // Async write on Firestore
-    await setDoc(doc(db, 'doctors', newDoctor.id), newDoctor);
-    await setDoc(doc(db, 'credentials', generatedUsername), { 
-      username: generatedUsername, 
-      password: 'abc123' 
-    });
+    try {
+      await setDoc(doc(db, 'doctors', newDoctor.id), newDoctor);
+      await setDoc(doc(db, 'credentials', generatedUsername), { 
+        username: generatedUsername, 
+        password: 'abc123' 
+      });
+    } catch (err) {
+      console.warn("Firestore doctor registration save failed, offline fallback preserved it in localStorage", err);
+    }
 
     return newDoctor;
   };
@@ -424,21 +538,34 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
 
-    // Optimistic state updates (SAFEGUARD - guarantees immediate local availability for login)
-    setPatients((prev) => [...prev, newPatient]);
-    setCredentials((prev) => ({
-      ...prev,
+    // Synchronous LocalStorage & Optimistic React State update (guarantees persistence across logouts/reloads)
+    const updatedPats = [...patients, newPatient];
+    setPatients(updatedPats);
+    try {
+      localStorage.setItem('clinical_patients', JSON.stringify(updatedPats));
+    } catch (e) {
+      console.error(e);
+    }
+
+    const updatedCreds = {
+      ...credentials,
       [generatedUsername]: 'abc123'
-    }));
+    };
+    setCredentials(updatedCreds);
+    try {
+      localStorage.setItem('clinical_credentials', JSON.stringify(updatedCreds));
+    } catch (e) {
+      console.error(e);
+    }
 
     // Write to firestore in background
     setDoc(doc(db, 'patients', newPatient.id), newPatient)
-      .catch((err) => handleFirestoreError(err, OperationType.WRITE, `patients/${newPatient.id}`));
+      .catch((err) => console.warn("Firestore patient write failed, offline fallback preserved it in localStorage", err));
 
     setDoc(doc(db, 'credentials', generatedUsername), { 
       username: generatedUsername, 
       password: 'abc123' 
-    }).catch((err) => handleFirestoreError(err, OperationType.WRITE, `credentials/${generatedUsername}`));
+    }).catch((err) => console.warn("Firestore credentials write failed, offline fallback preserved it in localStorage", err));
 
     return newPatient;
   };
@@ -449,6 +576,37 @@ export default function App() {
     const currentPat = session.patientDetails;
     const patUsername = currentPat.username;
 
+    const updatedPatient = {
+      ...currentPat,
+      requiresPasswordChange: false
+    };
+
+    // Optimistic local state and local storage updates
+    const updatedPats = patients.map((p) => p.id === currentPat.id ? updatedPatient : p);
+    setPatients(updatedPats);
+    try {
+      localStorage.setItem('clinical_patients', JSON.stringify(updatedPats));
+    } catch (e) {
+      console.error(e);
+    }
+
+    const updatedCreds = {
+      ...credentials,
+      [patUsername]: newPass
+    };
+    setCredentials(updatedCreds);
+    try {
+      localStorage.setItem('clinical_credentials', JSON.stringify(updatedCreds));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Update active session too
+    setSession({
+      ...session,
+      patientDetails: updatedPatient
+    });
+
     try {
       // 1. Update password in credentials mapping
       await setDoc(doc(db, 'credentials', patUsername), {
@@ -457,19 +615,9 @@ export default function App() {
       });
 
       // 2. Clear requiresPasswordChange in patient's profile
-      const updatedPatient = {
-        ...currentPat,
-        requiresPasswordChange: false
-      };
       await setDoc(doc(db, 'patients', currentPat.id), updatedPatient);
-
-      // 3. Update active session too
-      setSession({
-        ...session,
-        patientDetails: updatedPatient
-      });
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `patients/${currentPat.id}`);
+      console.warn("Firestore password update failed, offline local storage fallback succeeded:", error);
     }
   };
 
@@ -479,6 +627,37 @@ export default function App() {
     const currentDoc = session.doctorDetails;
     const docUsername = currentDoc.username;
 
+    const updatedDoctor: Doctor = {
+      ...currentDoc,
+      requiresPasswordChange: false
+    };
+
+    // Optimistic local state and local storage updates
+    const updatedDocs = doctors.map((d) => d.id === currentDoc.id ? updatedDoctor : d);
+    setDoctors(updatedDocs);
+    try {
+      localStorage.setItem('clinical_doctors', JSON.stringify(updatedDocs));
+    } catch (e) {
+      console.error(e);
+    }
+
+    const updatedCreds = {
+      ...credentials,
+      [docUsername]: newPass
+    };
+    setCredentials(updatedCreds);
+    try {
+      localStorage.setItem('clinical_credentials', JSON.stringify(updatedCreds));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Update active session too
+    setSession({
+      ...session,
+      doctorDetails: updatedDoctor
+    });
+
     try {
       // 1. Update password in credentials mapping
       await setDoc(doc(db, 'credentials', docUsername), {
@@ -487,26 +666,9 @@ export default function App() {
       });
 
       // 2. Clear requiresPasswordChange in doctor's profile
-      const updatedDoctor: Doctor = {
-        ...currentDoc,
-        requiresPasswordChange: false
-      };
       await setDoc(doc(db, 'doctors', currentDoc.id), updatedDoctor);
-
-      // 3. Update local state optimistically
-      setDoctors((prev) => prev.map((d) => d.id === currentDoc.id ? updatedDoctor : d));
-      setCredentials((prev) => ({
-        ...prev,
-        [docUsername]: newPass
-      }));
-
-      // 4. Update active session too
-      setSession({
-        ...session,
-        doctorDetails: updatedDoctor
-      });
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `doctors/${currentDoc.id}`);
+      console.warn("Firestore doctor password change failed, offline local storage fallback succeeded:", error);
     }
   };
 
@@ -523,16 +685,50 @@ export default function App() {
       notes: notes.trim() || undefined
     };
 
+    // Optimistic local storage update
+    const updatedLogs = [newEntry, ...logs];
+    setLogs(updatedLogs);
+    try {
+      localStorage.setItem('clinical_logs', JSON.stringify(updatedLogs));
+    } catch (e) {
+      console.error(e);
+    }
+
     try {
       await setDoc(doc(db, 'logs', newEntry.id), newEntry);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `logs/${newEntry.id}`);
+      console.warn("Firestore log save failed, using Cached LocalStorage fallback:", error);
     }
   };
 
   const handleDeletePatient = async (id: string) => {
     const patientToDelete = patients.find((p) => p.id === id);
     
+    // Optimistic local storage update
+    const updatedPats = patients.filter((p) => p.id !== id);
+    setPatients(updatedPats);
+    try {
+      localStorage.setItem('clinical_patients', JSON.stringify(updatedPats));
+    } catch (e) {
+      console.error(e);
+    }
+
+    const updatedLogs = logs.filter((l) => l.patientId !== id);
+    setLogs(updatedLogs);
+    try {
+      localStorage.setItem('clinical_logs', JSON.stringify(updatedLogs));
+    } catch (e) {
+      console.error(e);
+    }
+
+    const updatedConfirms = medicationConfirmations.filter((mc) => mc.patientId !== id);
+    setMedicationConfirmations(updatedConfirms);
+    try {
+      localStorage.setItem('clinical_confirmations', JSON.stringify(updatedConfirms));
+    } catch (e) {
+      console.error(e);
+    }
+
     try {
       if (patientToDelete) {
         await deleteDoc(doc(db, 'credentials', patientToDelete.username));
@@ -552,7 +748,7 @@ export default function App() {
       }
 
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `patients/${id}`);
+      console.warn("Firestore patient delete error, using localStorage fallback:", error);
     }
   };
 
@@ -560,21 +756,40 @@ export default function App() {
     const pToUpdate = patients.find((p) => p.id === patientId);
     if (!pToUpdate) return;
 
+    const updatedPatient = {
+      ...pToUpdate,
+      medications
+    };
+
+    // Optimistic local storage write
+    const updatedPats = patients.map((p) => p.id === patientId ? updatedPatient : p);
+    setPatients(updatedPats);
     try {
-      await setDoc(doc(db, 'patients', patientId), {
-        ...pToUpdate,
-        medications
-      });
+      localStorage.setItem('clinical_patients', JSON.stringify(updatedPats));
+    } catch (e) {
+      console.error(e);
+    }
+
+    try {
+      await setDoc(doc(db, 'patients', patientId), updatedPatient);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `patients/${patientId}`);
+      console.warn("Firestore update medication failed, using localStorage fallback:", error);
     }
   };
 
   const handleConfirmMedication = async (confirmation: MedicationConfirmation) => {
+    const updatedConfirmations = [confirmation, ...medicationConfirmations];
+    setMedicationConfirmations(updatedConfirmations);
+    try {
+      localStorage.setItem('clinical_confirmations', JSON.stringify(updatedConfirmations));
+    } catch (e) {
+      console.error(e);
+    }
+
     try {
       await setDoc(doc(db, 'medicationConfirmations', confirmation.id), confirmation);
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `medicationConfirmations/${confirmation.id}`);
+      console.warn("Firestore confirm medication failed, using localStorage fallback:", error);
     }
   };
 
