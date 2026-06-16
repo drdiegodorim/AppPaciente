@@ -1,14 +1,16 @@
 import React, { useState, useEffect, FormEvent } from 'react';
-import { Shield, User, Key, Check, Info, Mail, ArrowLeft, Smartphone, Download, Share2, PlusSquare } from 'lucide-react';
+import { Shield, User, Key, Check, Info, Mail, ArrowLeft, Smartphone, Download, Share2, PlusSquare, Database, Copy } from 'lucide-react';
 import { Patient, Doctor } from '../types';
+import { SupabaseSchemaStatus } from '../lib/supabase';
 
 interface LoginScreenProps {
   onLogin: (username: string, role: 'doctor' | 'patient', customPassword?: string) => string | null;
   patients: Patient[];
   onRegisterDoctor: (firstName: string, lastName: string, email: string, crm: string) => Promise<Doctor>;
+  supabaseStatus: SupabaseSchemaStatus;
 }
 
-export default function LoginScreen({ onLogin, patients, onRegisterDoctor }: LoginScreenProps) {
+export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supabaseStatus }: LoginScreenProps) {
   const [role, setRole] = useState<'doctor' | 'patient'>('patient');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -29,6 +31,10 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor }: Log
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showHowToInstall, setShowHowToInstall] = useState(false);
+
+  // Supabase connection assistance states
+  const [showSqlSetup, setShowSqlSetup] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
 
   useEffect(() => {
     // Check if app is already running as an installed PWA
@@ -493,6 +499,176 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor }: Log
                 </div>
               )}
             </>
+          )}
+        </div>
+
+        {/* Supabase Connection Assistant Card */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-md p-6 space-y-4">
+          <div className="flex items-start gap-3">
+            <div className={`rounded-xl p-2 shrink-0 ${supabaseStatus.connected && !supabaseStatus.tablesMissing ? 'bg-emerald-50 text-teal-600' : 'bg-amber-50 text-amber-600'}`}>
+              <Database className="h-5 w-5" />
+            </div>
+            <div className="space-y-1 w-full">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 text-sm">Integração Supabase</h3>
+                {supabaseStatus.connected && !supabaseStatus.tablesMissing ? (
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-teal-700 ring-1 ring-inset ring-emerald-600/10">
+                    Ativo 🟢
+                  </span>
+                ) : supabaseStatus.tablesMissing ? (
+                  <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/10">
+                    Tabelas Ausentes ⚠️
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-600/10">
+                    Conectando... ⚙️
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                {supabaseStatus.connected && !supabaseStatus.tablesMissing 
+                  ? "Seu consultório médico está totalmente integrado e sincronizado em tempo real com o banco de dados do Supabase!"
+                  : "Por favor, certifique-se de configurar as tabelas necessárias no seu projeto para ligar o banco de dados."}
+              </p>
+            </div>
+          </div>
+
+          {(!supabaseStatus.connected || supabaseStatus.tablesMissing) && (
+            <div className="space-y-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowSqlSetup(!showSqlSetup)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-50 hover:bg-slate-100 py-2.5 text-xs font-semibold text-slate-700 border border-slate-200 transition cursor-pointer"
+              >
+                <Database className="h-4 w-4 text-teal-600" />
+                {showSqlSetup ? 'Ocultar Instruções de Tabelas SQL' : 'Como Configurar Tabelas no Supabase?'}
+              </button>
+
+              {showSqlSetup && (
+                <div className="mt-2 space-y-3 pt-1 text-xs text-slate-600 leading-relaxed">
+                  <div className="rounded-xl bg-slate-50 p-3 border border-slate-200 space-y-2">
+                    <p className="font-semibold text-slate-700">Siga as instruções para configurar seu banco de dados:</p>
+                    <ol className="list-decimal pl-4.5 space-y-1 text-slate-500">
+                      <li>Acesse o dashboard do seu projeto no <strong className="text-slate-700">Supabase</strong>.</li>
+                      <li>No menu lateral esquerdo, vá em <strong className="text-teal-700">SQL Editor</strong>.</li>
+                      <li>Clique em <strong className="text-teal-700">"New Query"</strong>.</li>
+                      <li>Cole o script SQL disponibilizado abaixo e clique em <strong className="text-teal-700">"Run"</strong> para criar as tabelas necessárias.</li>
+                    </ol>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[9px] text-slate-400 uppercase tracking-wider">Script SQL de Inicialização</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sql = `CREATE TABLE IF NOT EXISTS credentials (
+  username text PRIMARY KEY,
+  password text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS doctors (
+  id text PRIMARY KEY,
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  username text NOT NULL UNIQUE,
+  email text NOT NULL,
+  crm text NOT NULL,
+  requires_password_change boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS patients (
+  id text PRIMARY KEY,
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  username text NOT NULL UNIQUE,
+  diagnostic text NOT NULL,
+  requires_password_change boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  medications jsonb DEFAULT '[]'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS logs (
+  id text PRIMARY KEY,
+  patient_id text NOT NULL,
+  diagnostic text NOT NULL,
+  timestamp timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  data jsonb NOT NULL DEFAULT '{}'::jsonb,
+  notes text
+);
+
+CREATE TABLE IF NOT EXISTS medication_confirmations (
+  id text PRIMARY KEY,
+  patient_id text NOT NULL,
+  medication_id text NOT NULL,
+  medication_name text NOT NULL,
+  dosage text NOT NULL,
+  prescribed_time text NOT NULL,
+  confirmed_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);`;
+                          navigator.clipboard.writeText(sql);
+                          setCopiedSql(true);
+                          setTimeout(() => setCopiedSql(false), 2000);
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-600 hover:text-teal-700 cursor-pointer"
+                      >
+                        <Copy className="h-3 w-3" />
+                        {copiedSql ? 'Copiado! ✓' : 'Copiar Script SQL'}
+                      </button>
+                    </div>
+
+                    <pre className="p-3 bg-slate-950 text-slate-200 rounded-xl font-mono text-[9px] overflow-x-auto max-h-48 border border-slate-800 shadow-inner">
+{`CREATE TABLE IF NOT EXISTS credentials (
+  username text PRIMARY KEY,
+  password text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS doctors (
+  id text PRIMARY KEY,
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  username text NOT NULL UNIQUE,
+  email text NOT NULL,
+  crm text NOT NULL,
+  requires_password_change boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS patients (
+  id text PRIMARY KEY,
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  username text NOT NULL UNIQUE,
+  diagnostic text NOT NULL,
+  requires_password_change boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  medications jsonb DEFAULT '[]'::jsonb
+);
+
+CREATE TABLE IF NOT EXISTS logs (
+  id text PRIMARY KEY,
+  patient_id text NOT NULL,
+  diagnostic text NOT NULL,
+  timestamp timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  data jsonb NOT NULL DEFAULT '{}'::jsonb,
+  notes text
+);
+
+CREATE TABLE IF NOT EXISTS medication_confirmations (
+  id text PRIMARY KEY,
+  patient_id text NOT NULL,
+  medication_id text NOT NULL,
+  medication_name text NOT NULL,
+  dosage text NOT NULL,
+  prescribed_time text NOT NULL,
+  confirmed_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);`}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
