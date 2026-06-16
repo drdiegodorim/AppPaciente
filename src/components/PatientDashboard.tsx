@@ -69,6 +69,21 @@ export default function PatientDashboard({
       return () => clearInterval(interval);
     }
   }, [onSyncData]);
+  // Manual sync state
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleManualSync = async () => {
+    if (!onSyncData || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await onSyncData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 900);
+    }
+  };
+
   // Password change states
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -544,6 +559,17 @@ export default function PatientDashboard({
               <span className="text-sm text-slate-600">
                 Olá, <strong>{currentPatient.firstName} {currentPatient.lastName}</strong>
               </span>
+              {onSyncData && (
+                <button
+                  onClick={handleManualSync}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-700 transition disabled:opacity-60 cursor-pointer animate-pulse"
+                  title="Atualizar dados da sessão do paciente em tempo real"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                  {isSyncing ? "Atualizando..." : "Atualizar Sessão"}
+                </button>
+              )}
               <button
                 onClick={onLogout}
                 className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"

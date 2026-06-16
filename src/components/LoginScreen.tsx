@@ -1,5 +1,5 @@
 import React, { useState, useEffect, FormEvent } from 'react';
-import { Shield, User, Key, Check, Info, Mail, ArrowLeft, Smartphone, Download, Share2, PlusSquare, Database, Copy } from 'lucide-react';
+import { Shield, User, Key, Check, Info, Mail, ArrowLeft, Smartphone, Download, Share2, PlusSquare, Database, Copy, RefreshCw } from 'lucide-react';
 import { Patient, Doctor } from '../types';
 import { SupabaseSchemaStatus } from '../lib/supabase';
 
@@ -8,9 +8,10 @@ interface LoginScreenProps {
   patients: Patient[];
   onRegisterDoctor: (firstName: string, lastName: string, email: string, crm: string) => Promise<Doctor>;
   supabaseStatus: SupabaseSchemaStatus;
+  onSyncData?: () => Promise<void>;
 }
 
-export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supabaseStatus }: LoginScreenProps) {
+export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supabaseStatus, onSyncData }: LoginScreenProps) {
   const [role, setRole] = useState<'doctor' | 'patient'>('patient');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -18,6 +19,7 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
 
   // Doctor registration states
   const [isRegisteringDoctor, setIsRegisteringDoctor] = useState(false);
+  const [isSyncingData, setIsSyncingData] = useState(false);
   const [docFirstName, setDocFirstName] = useState('');
   const [docLastName, setDocLastName] = useState('');
   const [docEmail, setDocEmail] = useState('');
@@ -26,6 +28,18 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
   const [docRegSuccess, setDocRegSuccess] = useState<boolean>(false);
   const [registeredDocUsername, setRegisteredDocUsername] = useState('');
   const [isRegisteringLoading, setIsRegisteringLoading] = useState(false);
+
+  const handleSyncClick = async () => {
+    if (!onSyncData || isSyncingData) return;
+    setIsSyncingData(true);
+    try {
+      await onSyncData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTimeout(() => setIsSyncingData(false), 900);
+    }
+  };
 
   // PWA Install states
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -413,6 +427,21 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
                   Entrar no Consultório
                 </button>
               </div>
+
+              {role === 'patient' && onSyncData && (
+                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">Deseja atualizar dados de acesso?</span>
+                  <button
+                    type="button"
+                    onClick={handleSyncClick}
+                    disabled={isSyncingData}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold text-teal-600 hover:text-teal-700 disabled:opacity-55 cursor-pointer"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isSyncingData ? "animate-spin" : ""}`} />
+                    {isSyncingData ? "Atualizando..." : "Sincronizar Contas"}
+                  </button>
+                </div>
+              )}
             </form>
           )}
         </div>

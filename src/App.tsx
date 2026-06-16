@@ -766,7 +766,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 selection:bg-teal-500 selection:text-white">
       {!session ? (
-        <LoginScreen onLogin={handleLogin} patients={patients} onRegisterDoctor={handleRegisterDoctor} supabaseStatus={supabaseStatus} />
+        <LoginScreen onLogin={handleLogin} patients={patients} onRegisterDoctor={handleRegisterDoctor} supabaseStatus={supabaseStatus} onSyncData={syncWithSupabase} />
       ) : session.role === 'doctor' ? (
         <DoctorDashboard
           patients={patients}

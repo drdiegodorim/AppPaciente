@@ -85,9 +85,18 @@ export default function DoctorDashboard({
   const [newMedTime, setNewMedTime] = useState('08:00');
   const [isSyncingMedication, setIsSyncingMedication] = useState(false);
   const [syncStatusMessage, setSyncStatusMessage] = useState<string | null>(null);
+  const [editingMedId, setEditingMedId] = useState<string | null>(null);
 
   // Search states
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Reset editing medication state when selected patient changes
+  useEffect(() => {
+    setEditingMedId(null);
+    setNewMedName('');
+    setNewMedDosage('');
+    setNewMedTime('08:00');
+  }, [selectedPatientId]);
 
   // Auto-generate username helper preview
   const generatePreviewUsername = (fName: string, lName: string) => {
@@ -131,21 +140,41 @@ export default function DoctorDashboard({
     setSyncStatusMessage(null);
 
     const currentMedications = selectedPatient?.medications || [];
-    const newMed: MedicationPrescription = {
-      id: 'med_' + Date.now(),
-      name: newMedName.trim(),
-      dosage: newMedDosage.trim(),
-      time: newMedTime
-    };
+    let updatedMeds: MedicationPrescription[];
 
-    const updatedMeds = [...currentMedications, newMed];
+    if (editingMedId) {
+      updatedMeds = currentMedications.map((m) =>
+        m.id === editingMedId
+          ? {
+              ...m,
+              name: newMedName.trim(),
+              dosage: newMedDosage.trim(),
+              time: newMedTime,
+            }
+          : m
+      );
+    } else {
+      const newMed: MedicationPrescription = {
+        id: 'med_' + Date.now(),
+        name: newMedName.trim(),
+        dosage: newMedDosage.trim(),
+        time: newMedTime,
+      };
+      updatedMeds = [...currentMedications, newMed];
+    }
+
     try {
       await onUpdatePatientMedications(selectedPatientId, updatedMeds);
-      setSyncStatusMessage('Medicamento cadastrado e sincronizado com o paciente!');
+      setSyncStatusMessage(
+        editingMedId
+          ? 'Medicamento editado e alteração sincronizada!'
+          : 'Medicamento cadastrado e sincronizado com o paciente!'
+      );
       // Reset fields
       setNewMedName('');
       setNewMedDosage('');
       setNewMedTime('08:00');
+      setEditingMedId(null);
     } catch (err: any) {
       console.error(err);
       setSyncStatusMessage('Erro ao sincronizar. Verifique a conexão.');
@@ -162,6 +191,13 @@ export default function DoctorDashboard({
 
     setIsSyncingMedication(true);
     setSyncStatusMessage(null);
+
+    if (editingMedId === medId) {
+      setEditingMedId(null);
+      setNewMedName('');
+      setNewMedDosage('');
+      setNewMedTime('08:00');
+    }
 
     const currentMedications = selectedPatient?.medications || [];
     const updatedMeds = currentMedications.filter((m) => m.id !== medId);
@@ -549,13 +585,32 @@ export default function DoctorDashboard({
                               <p className="text-[10px] text-slate-500">{med.dosage}</p>
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleRemoveMedication(med.id)}
-                            className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-slate-50 transition"
-                            title="Remover medicamento"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingMedId(med.id);
+                                setNewMedName(med.name);
+                                setNewMedDosage(med.dosage);
+                                setNewMedTime(med.time);
+                              }}
+                              className={`p-1.5 rounded transition ${
+                                editingMedId === med.id
+                                  ? 'text-teal-600 bg-teal-50'
+                                  : 'text-slate-400 hover:text-teal-600 hover:bg-slate-55'
+                              }`}
+                              title="Editar posologia/horário"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveMedication(med.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-500 rounded hover:bg-slate-55 transition"
+                              title="Remover medicamento"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -564,7 +619,18 @@ export default function DoctorDashboard({
 
                 {/* Form para prescrever novo medicamento */}
                 <form onSubmit={handleAddMedication} className="border-t border-slate-100 pt-4 space-y-3">
-                  <h4 className="text-xs font-bold text-slate-800">Prescrever Novo Medicamento</h4>
+                  <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                    {editingMedId ? (
+                      <>
+                        <Edit className="h-4 w-4 text-teal-600" />
+                        <span>Editar Medicamento Prescrito</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Prescrever Novo Medicamento</span>
+                      </>
+                    )}
+                  </h4>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[10px] font-medium text-slate-400 mb-1">Nome do Medicamento</label>
@@ -600,20 +666,36 @@ export default function DoctorDashboard({
                         className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none"
                       />
                     </div>
-                    <button
-                      type="submit"
-                      disabled={isSyncingMedication}
-                      className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs px-4 py-2 transition shadow-sm hover:shadow flex items-center gap-1.5 disabled:opacity-50"
-                    >
-                      {isSyncingMedication ? (
-                        <>
-                          <RefreshCw className="h-3 w-3 animate-spin" />
-                          Sincronizando...
-                        </>
-                      ) : (
-                        "Cadastrar e Sincronizar"
+                    <div className="flex gap-2">
+                      {editingMedId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingMedId(null);
+                            setNewMedName('');
+                            setNewMedDosage('');
+                            setNewMedTime('08:00');
+                          }}
+                          className="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-4 py-2 transition"
+                        >
+                          Cancelar
+                        </button>
                       )}
-                    </button>
+                      <button
+                        type="submit"
+                        disabled={isSyncingMedication}
+                        className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs px-4 py-2 transition shadow-sm hover:shadow flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {isSyncingMedication ? (
+                          <>
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                            Sincronizando...
+                          </>
+                        ) : (
+                          editingMedId ? "Salvar e Sincronizar" : "Cadastrar e Sincronizar"
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </form>
               </div>
