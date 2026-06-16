@@ -232,6 +232,25 @@ export default function App() {
     let unsubCredentials: (() => void) | undefined;
 
     const initDb = async () => {
+      let loadedP = false;
+      let loadedD = false;
+      let loadedL = false;
+      let loadedMC = false;
+      let loadedC = false;
+
+      const checkIfAllLoaded = () => {
+        if (loadedP && loadedD && loadedL && loadedMC && loadedC) {
+          setDbLoading(false);
+          if (timeoutId) clearTimeout(timeoutId);
+        }
+      };
+
+      // Safeguard timeout to ensure we do not keep user hanging indefinitely if some listener or server connection lags
+      const timeoutId = setTimeout(() => {
+        setDbLoading(false);
+        console.warn("Seeding or initial data load resolved via safeguard timeout.");
+      }, 3500);
+
       try {
         try {
           await initFirebaseSession();
@@ -273,8 +292,12 @@ export default function App() {
           } catch (e) {
             console.error(e);
           }
+          loadedP = true;
+          checkIfAllLoaded();
         }, (error) => {
           console.warn("Firestore error reading patients:", error);
+          loadedP = true;
+          checkIfAllLoaded();
         });
 
         // 1.5 Live Doctors Listener
@@ -289,8 +312,12 @@ export default function App() {
           } catch (e) {
             console.error(e);
           }
+          loadedD = true;
+          checkIfAllLoaded();
         }, (error) => {
           console.warn("Firestore error reading doctors:", error);
+          loadedD = true;
+          checkIfAllLoaded();
         });
 
         // 2. Live Logs Listener
@@ -306,8 +333,12 @@ export default function App() {
           } catch (e) {
             console.error(e);
           }
+          loadedL = true;
+          checkIfAllLoaded();
         }, (error) => {
           console.warn("Firestore error reading logs:", error);
+          loadedL = true;
+          checkIfAllLoaded();
         });
 
         // 3. Live Medication Confirmations Listener
@@ -323,8 +354,12 @@ export default function App() {
           } catch (e) {
             console.error(e);
           }
+          loadedMC = true;
+          checkIfAllLoaded();
         }, (error) => {
           console.warn("Firestore error reading medicationConfirmations:", error);
+          loadedMC = true;
+          checkIfAllLoaded();
         });
 
         // 4. Live Credentials mapping listener
@@ -342,15 +377,18 @@ export default function App() {
           } catch (e) {
             console.error(e);
           }
+          loadedC = true;
+          checkIfAllLoaded();
         }, (error) => {
           console.warn("Firestore error reading credentials:", error);
+          loadedC = true;
+          checkIfAllLoaded();
         });
-
-        setDbLoading(false);
 
       } catch (err) {
         console.error("Firestore DB Link failure", err);
         setDbLoading(false);
+        if (timeoutId) clearTimeout(timeoutId);
       }
     };
 
