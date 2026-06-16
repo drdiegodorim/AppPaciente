@@ -513,6 +513,34 @@ export default function App() {
     return newPatient;
   };
 
+  const handleUpdatePatient = (patientId: string, firstName: string, lastName: string, diagnostic: DiagnosticType): Patient => {
+    const currentPatient = patients.find(p => p.id === patientId);
+    if (!currentPatient) {
+      throw new Error("Patient not found");
+    }
+
+    const updatedPatient: Patient = {
+      ...currentPatient,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      diagnostic
+    };
+
+    const updatedPats = patients.map((p) => p.id === patientId ? updatedPatient : p);
+    setPatients(updatedPats);
+    try {
+      localStorage.setItem('clinical_patients', JSON.stringify(updatedPats));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Persist on Supabase in background
+    savePatientDB(updatedPatient)
+      .catch((err) => console.warn("Could not update patient on Supabase:", err));
+
+    return updatedPatient;
+  };
+
   const handleChangePassword = async (newPass: string) => {
     if (!session || session.role !== 'patient' || !session.patientDetails) return;
 
@@ -718,6 +746,7 @@ export default function App() {
           medicationConfirmations={medicationConfirmations}
           onUpdatePatientMedications={handleUpdatePatientMedications}
           onAddPatient={handleAddPatient}
+          onUpdatePatient={handleUpdatePatient}
           onDeletePatient={handleDeletePatient}
           onLogout={handleLogout}
         />

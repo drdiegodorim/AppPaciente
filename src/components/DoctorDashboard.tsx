@@ -1,4 +1,4 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, useEffect } from 'react';
 import {
   Users,
   UserPlus,
@@ -14,7 +14,8 @@ import {
   FileText,
   TrendingUp,
   AlertCircle,
-  Trash2
+  Trash2,
+  Edit
 } from 'lucide-react';
 import { Patient, DiagnosticType, TrackingEntry, MedicationPrescription, MedicationConfirmation } from '../types';
 import { CLINICAL_CARE_PLANS } from '../data/carePlans';
@@ -25,6 +26,7 @@ interface DoctorDashboardProps {
   medicationConfirmations: MedicationConfirmation[];
   onUpdatePatientMedications: (patientId: string, medications: MedicationPrescription[]) => void;
   onAddPatient: (firstName: string, lastName: string, diagnostic: DiagnosticType) => Patient;
+  onUpdatePatient: (patientId: string, firstName: string, lastName: string, diagnostic: DiagnosticType) => void;
   onDeletePatient: (id: string) => void;
   onLogout: () => void;
 }
@@ -35,12 +37,36 @@ export default function DoctorDashboard({
   medicationConfirmations,
   onUpdatePatientMedications,
   onAddPatient,
+  onUpdatePatient,
   onDeletePatient,
   onLogout
 }: DoctorDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'register' | 'patients'>('overview');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Edit Patient modal states
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
+  const [editDiagnostic, setEditDiagnostic] = useState<DiagnosticType>('Enxaqueca');
+
+  // Sync edit form fields when editing patient changes
+  useEffect(() => {
+    if (editingPatient) {
+      setEditFirstName(editingPatient.firstName);
+      setEditLastName(editingPatient.lastName);
+      setEditDiagnostic(editingPatient.diagnostic);
+    }
+  }, [editingPatient]);
+
+  const handleEditSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingPatient || !editFirstName.trim() || !editLastName.trim()) return;
+
+    onUpdatePatient(editingPatient.id, editFirstName.trim(), editLastName.trim(), editDiagnostic);
+    setEditingPatient(null);
+  };
 
   // Doctor Patient Notification states
   const [sendingAlertPatientId, setSendingAlertPatientId] = useState<string | null>(null);
@@ -218,13 +244,22 @@ export default function DoctorDashboard({
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-2xl font-bold text-slate-800">
                       {selectedPatient.firstName} {selectedPatient.lastName}
                     </h2>
                     <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-700 border border-teal-100">
                       {selectedPatient.diagnostic}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditingPatient(selectedPatient)}
+                      title="Editar Ficha"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-700 transition cursor-pointer ml-1"
+                    >
+                      <Edit className="h-3.5 w-3.5 text-teal-600" />
+                      Editar Ficha
+                    </button>
                   </div>
                   <p className="text-sm text-slate-500 mt-1">
                     Nome de usuário: <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-teal-700 text-xs">{selectedPatient.username}</code> • Cadastrado em: {new Date(selectedPatient.createdAt).toLocaleDateString()}
@@ -991,6 +1026,15 @@ export default function DoctorDashboard({
                                     Ver Relatórios
                                   </button>
                                   <button
+                                    type="button"
+                                    onClick={() => setEditingPatient(pat)}
+                                    title="Editar Cadastro"
+                                    className="rounded-lg bg-slate-100 p-2 text-slate-700 hover:bg-slate-200 transition"
+                                    id={`edit-patient-btn-${pat.id}`}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
                                     onClick={() => setDeleteConfirmId(pat.id)}
                                     title="Excluir Paciente"
                                     className="rounded-lg bg-red-50 p-2 text-red-650 hover:bg-red-100 transition"
@@ -1047,6 +1091,80 @@ export default function DoctorDashboard({
                 Confirmar Exclusão
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {editingPatient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full mx-4 shadow-xl space-y-4">
+            <div className="flex items-center gap-3 text-teal-650">
+              <div className="p-2 bg-teal-50 rounded-full">
+                <Edit className="h-6 w-6 text-teal-600" />
+              </div>
+              <h4 className="font-bold text-slate-800 text-sm">Editar Cadastro do Paciente</h4>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Nome
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Sobrenome
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                  Plano de Cuidado (Diagnóstico)
+                </label>
+                <select
+                  value={editDiagnostic}
+                  onChange={(e) => setEditDiagnostic(e.target.value as DiagnosticType)}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
+                >
+                  {Object.keys(CLINICAL_CARE_PLANS).map((diag) => (
+                    <option key={diag} value={diag}>
+                      {diag}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingPatient(null)}
+                  className="px-4 py-2 rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 transition font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl text-white bg-teal-600 hover:bg-teal-700 transition font-semibold"
+                >
+                  Salvar Alterações
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
