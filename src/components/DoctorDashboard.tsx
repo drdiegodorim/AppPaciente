@@ -16,7 +16,10 @@ import {
   AlertCircle,
   Trash2,
   Edit,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  MessageSquare,
+  Phone
 } from 'lucide-react';
 import { Patient, DiagnosticType, TrackingEntry, MedicationPrescription, MedicationConfirmation } from '../types';
 import { CLINICAL_CARE_PLANS } from '../data/carePlans';
@@ -42,9 +45,32 @@ export default function DoctorDashboard({
   onDeletePatient,
   onLogout
 }: DoctorDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'register' | 'patients'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'register' | 'patients' | 'alerts'>('overview');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Phone numbers storage mapped by patientId (saved in localStorage on the doctor's browser)
+  const [patientPhones, setPatientPhones] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem('doctor_patient_phones');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
+  const [tempPhone, setTempPhone] = useState<string>('');
+
+  const savePatientPhone = (patientId: string, phone: string) => {
+    const updated = { ...patientPhones, [patientId]: phone };
+    setPatientPhones(updated);
+    try {
+      localStorage.setItem('doctor_patient_phones', JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Edit Patient modal states
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
@@ -97,6 +123,64 @@ export default function DoctorDashboard({
     setNewMedDosage('');
     setNewMedTime('08:00');
   }, [selectedPatientId]);
+
+  // Alarms and alerts helper functions
+  const parseTimeToMinutes = (timeStr: string) => {
+    if (!timeStr) return 0;
+    const [h, m] = timeStr.trim().split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+
+  const getMissedMedsToday = (patient: Patient) => {
+    const todayStr = new Date().toLocaleDateString('pt-BR');
+    const meds = patient.medications || [];
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    return meds.filter((med) => {
+      const medMin = parseTimeToMinutes(med.time);
+      const hasTimePassed = currentMinutes >= medMin;
+      if (!hasTimePassed) return false;
+
+      // Check if there is any confirmation today
+      const wasConfirmedToday = medicationConfirmations.some((c) => {
+        return (
+          c.patientId === patient.id &&
+          c.medicationId === med.id &&
+          new Date(c.confirmedAt).toLocaleDateString('pt-BR') === todayStr
+        );
+      });
+
+      return !wasConfirmedToday;
+    });
+  };
+
+  // List of patients currently showing missed doses alerts
+  const alertingPatientsList = patients.filter((p) => {
+    return getMissedMedsToday(p).length > 0;
+  });
+
+  const generateWhatsAppUrl = (patient: Patient, missedMeds: MedicationPrescription[], phone: string) => {
+    const medsListStr = missedMeds.map((m) => `• *${m.name}* (${m.dosage} às ${m.time})`).join('\n');
+    const greeting = `Olá, *${patient.firstName} ${patient.lastName}*!`;
+    
+    const message = `${greeting}
+
+Aqui é da equipe do seu médico. Acompanhando o seu plano de cuidado para *${patient.diagnostic}*, notamos que ainda *não foi registrado o uso do(s) medicamento(s)* de hoje:
+
+${medsListStr}
+
+Gostaríamos de saber: *foi apenas um esquecimento de registrar no aplicativo, ou você esqueceu mesmo de tomar a medicação de hoje?*
+
+Lembrando que o uso regular e nos horários exatos é muito importante para o sucesso do seu tratamento. Se precisar de alguma ajuda ou tiver qualquer dificuldade, estamos aqui para lhe dar suporte!
+
+Ficamos no aguardo de sua confirmação. Abraços.`;
+
+    const cleanPhone = phone.replace(/\D/g, ''); // keep numbers only
+    const formattedPhone = cleanPhone.length === 11 || cleanPhone.length === 10 ? `55${cleanPhone}` : cleanPhone;
+    
+    return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
+  };
 
   // Auto-generate username helper preview
   const generatePreviewUsername = (fName: string, lName: string) => {
@@ -908,6 +992,21 @@ export default function DoctorDashboard({
               >
                 Cadastrar Novo Paciente
               </button>
+              <button
+                onClick={() => { setActiveTab('alerts'); setSuccessMessage(null); }}
+                className={`pb-3 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${
+                  activeTab === 'alerts'
+                    ? 'border-rose-600 text-rose-600 font-bold'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Alertas
+                {alertingPatientsList.length > 0 && (
+                  <span className="bg-rose-500 text-white font-bold text-[10px] px-2 py-0.5 rounded-full flex items-center justify-center animate-pulse shrink-0">
+                    {alertingPatientsList.length}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* TAB CONTENTS */}
@@ -1210,6 +1309,170 @@ export default function DoctorDashboard({
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'alerts' && (
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-rose-100 bg-rose-50/30 p-6 shadow-sm">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-rose-600" />
+                        Acompanhamento de Alertas de Atraso de Medicação
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Esta lista mostra pacientes com medicamentos prescritos cujo horário de hoje já passou, mas que não foram confirmados como tomados/registrados.
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-xl border border-slate-200 px-4 py-2 text-center shadow-xs">
+                      <span className="block text-[10px] uppercase font-bold text-slate-400">Total em Atraso</span>
+                      <span className="text-xl font-black text-rose-600">{alertingPatientsList.length}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {alertingPatientsList.length === 0 ? (
+                  <div className="flex h-56 flex-col items-center justify-center text-center rounded-2xl bg-white border border-slate-200 p-6 shadow-sm">
+                    <CheckCircle className="h-12 w-12 text-emerald-500 mb-3 animate-bounce" />
+                    <h4 className="text-sm font-bold text-slate-800">Tudo em dia!</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mt-1">
+                      Nenhum paciente possui dosagens pendentes para o momento atual de hoje. ADERÊNCIA PERFEITA!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {alertingPatientsList.map((patient) => {
+                      const missedMeds = getMissedMedsToday(patient);
+                      const phone = patientPhones[patient.id] || '';
+                      const isEditingPhone = editingPhoneId === patient.id;
+
+                      return (
+                        <div key={patient.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4">
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-start gap-2">
+                              <div>
+                                <h4 className="font-bold text-slate-800 text-sm">
+                                  {patient.firstName} {patient.lastName}
+                                </h4>
+                                <span className="inline-block mt-1 text-[10px] bg-teal-50 border border-teal-100/50 text-teal-700 font-bold px-2 py-0.5 rounded-full">
+                                  {patient.diagnostic}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-mono bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">
+                                @{patient.username}
+                              </span>
+                            </div>
+
+                            {/* Missed Medication list */}
+                            <div className="bg-rose-50/40 border border-rose-100 rounded-xl p-3 space-y-2">
+                              <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wide flex items-center gap-1.5">
+                                <span className="inline-block h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
+                                {missedMeds.length} medicação(ões) pendente(s) hoje:
+                              </span>
+                              <div className="space-y-1.5">
+                                {missedMeds.map((med) => (
+                                  <div key={med.id} className="flex justify-between items-center text-xs bg-white border border-rose-50 p-2 rounded-md">
+                                    <div className="font-medium text-slate-700">
+                                      {med.name} <span className="text-[10px] text-slate-400">({med.dosage})</span>
+                                    </div>
+                                    <div className="font-mono text-xs font-bold text-rose-600 flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {med.time}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Phone input & Whatsapp Option */}
+                          <div className="border-t border-slate-100 pt-4 space-y-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                                Telefone do Paciente (WhatsApp)
+                              </label>
+                              
+                              {isEditingPhone ? (
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Ex: 11999999999"
+                                    value={tempPhone}
+                                    onChange={(e) => setTempPhone(e.target.value)}
+                                    className="w-full rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-800 outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      savePatientPhone(patient.id, tempPhone);
+                                      setEditingPhoneId(null);
+                                    }}
+                                    className="px-3 py-1 bg-teal-600 text-white rounded-lg text-xs font-bold hover:bg-teal-700 transition"
+                                  >
+                                    Salvar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingPhoneId(null)}
+                                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex justify-between items-center bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5 text-xs">
+                                  <span className="text-slate-600 font-mono">
+                                    {phone ? (
+                                      phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+                                    ) : (
+                                      <span className="text-slate-400 italic font-sans">Nenhum telefone cadastrado</span>
+                                    )}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingPhoneId(patient.id);
+                                      setTempPhone(phone);
+                                    }}
+                                    className="text-[10px] text-teal-600 hover:text-teal-700 font-bold"
+                                  >
+                                    {phone ? 'Alterar' : 'Cadastrar'}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Enviar Whatsapp button */}
+                            {phone ? (
+                              <a
+                                href={generateWhatsAppUrl(patient, missedMeds, phone)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 transition text-center shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                                Enviar Mensagem via WhatsApp
+                              </a>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingPhoneId(patient.id);
+                                  setTempPhone('');
+                                }}
+                                className="w-full rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 font-semibold text-xs py-2.5 px-4 transition flex items-center justify-center gap-2 cursor-pointer border border-dashed border-slate-200"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                                Cadastre Celular para Habilitar Envio
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
