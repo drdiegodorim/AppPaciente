@@ -350,6 +350,7 @@ export default function PatientDashboard({
       if (f.type === 'scale') initial[f.id] = f.min !== undefined ? f.min : 5;
       else if (f.type === 'boolean') initial[f.id] = false;
       else if (f.type === 'select') initial[f.id] = f.options ? f.options[0] : '';
+      else if (f.type === 'multiselect') initial[f.id] = [];
       else if (f.type === 'number') initial[f.id] = 0;
       else initial[f.id] = '';
     });
@@ -866,6 +867,34 @@ export default function PatientDashboard({
                           </option>
                         ))}
                       </select>
+                    )}
+
+                    {f.type === 'multiselect' && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {f.options?.map((opt) => {
+                          const currentVal = Array.isArray(formData[f.id]) ? formData[f.id] : [];
+                          const isSelected = currentVal.includes(opt);
+                          return (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => {
+                                const updatedList = isSelected
+                                  ? currentVal.filter((item: string) => item !== opt)
+                                  : [...currentVal, opt];
+                                handleFieldChange(f.id, updatedList);
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition duration-150 ${
+                                isSelected
+                                  ? 'bg-teal-50 border-teal-500 text-teal-700 shadow-sm'
+                                  : 'bg-white border-slate-200 text-slate-500 hover:border-slate-350 hover:bg-slate-50'
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
 
                     {f.type === 'number' && (

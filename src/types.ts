@@ -36,7 +36,7 @@ export interface YouTubeVideo {
 export interface TrackerField {
   id: string;
   label: string;
-  type: 'scale' | 'select' | 'boolean' | 'number' | 'text';
+  type: 'scale' | 'select' | 'boolean' | 'number' | 'text' | 'multiselect';
   options?: string[];
   placeholder?: string;
   min?: number;

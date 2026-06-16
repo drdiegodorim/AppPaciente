@@ -901,9 +901,13 @@ Ficamos no aguardo de sua confirmação. Abraços.`;
                           // Find field configuration to show real human label
                           const label = CLINICAL_CARE_PLANS[entry.diagnostic]?.trackerConfig.fields.find(f => f.id === fieldKey)?.label || fieldKey;
 
-                          let displayVal = String(val);
-                          if (typeof val === 'boolean') {
+                          let displayVal = '';
+                          if (Array.isArray(val)) {
+                            displayVal = val.length > 0 ? val.join(', ') : 'Nenhum';
+                          } else if (typeof val === 'boolean') {
                             displayVal = val ? 'Sim' : 'Não';
+                          } else {
+                            displayVal = String(val !== undefined && val !== null ? val : 'Não registrado');
                           }
 
                           return (

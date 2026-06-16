@@ -44,28 +44,61 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
       }
     ],
     trackerConfig: {
-      buttonLabel: 'Registrar Sintomas de Enxaqueca Crônica',
+      buttonLabel: 'Registrar Sintomas de Enxaqueca',
       fields: [
         {
+          id: 'painPeriod',
+          label: 'Período da dor',
+          type: 'select',
+          options: ['Sem dor', 'Manhã', 'Tarde', 'Noite']
+        },
+        {
           id: 'painScale',
-          label: 'Intensidade Máxima da Dor Hoje (0 a 10)',
+          label: 'Intensidade da dor (0 a 10)',
           type: 'scale',
           min: 0,
           max: 10
         },
         {
-          id: 'triggers',
-          label: 'Gatilhos Prováveis Observados',
-          type: 'select',
-          options: ['Nenhum', 'Falta de sono', 'Excesso de telas', 'Alimentação específica', 'Estresse/Ansiedade', 'Mudança climática', 'Esforço físico intenso']
-        },
-        {
-          id: 'medicationUsed',
-          label: 'Utilizou Medicamento de Resgate Hoje?',
+          id: 'painRelief',
+          label: 'Alívio da dor: Melhora com repouso?',
           type: 'boolean'
         },
         {
-          id: 'medName',
+          id: 'triggers',
+          label: 'Possíveis gatilhos',
+          type: 'multiselect',
+          options: [
+            'Falta de sono',
+            'Excesso de telas',
+            'Alimento específico',
+            'Estresse/Ansiedade',
+            'Mudança climática',
+            'Esforço físico',
+            'Cheiro forte',
+            'Menstruação',
+            'Luz forte',
+            'Álcool'
+          ]
+        },
+        {
+          id: 'associatedSymptoms',
+          label: 'Sintomas associados',
+          type: 'multiselect',
+          options: [
+            'Sensibilidade a luz',
+            'Sensibilidade ao barulho',
+            'Tontura',
+            'Náusea/Vômito'
+          ]
+        },
+        {
+          id: 'medicationUsed',
+          label: 'Uso de medicamento de resgate?',
+          type: 'boolean'
+        },
+        {
+          id: 'medicationDetails',
           label: 'Se sim, qual medicamento e dosagem?',
           type: 'text',
           placeholder: 'Ex: Triptano 80mg, Dipirona 1g...'
