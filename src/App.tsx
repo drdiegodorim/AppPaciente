@@ -156,7 +156,7 @@ export default function App() {
         id: 'doctor_admin',
         firstName: 'Diego',
         lastName: 'Dorim',
-        username: 'medico.care',
+        username: 'diego.dorim',
         email: 'diego@dorim.com',
         crm: '123456-SP',
         requiresPasswordChange: false,
@@ -193,7 +193,7 @@ export default function App() {
       if (saved) return JSON.parse(saved);
       // Local fallback seeding
       const initialPasswords: Record<string, string> = {
-        'medico.care': 'abc123',
+        'diego.dorim': '#Ddrd0408!',
         'ana.silva': 'abc123',
         'carlos.oliveira': 'abc123',
         'beatriz.costa': 'abc123',
@@ -336,40 +336,31 @@ export default function App() {
 
     // 1. Doctor Login
     if (role === 'doctor') {
-      const savedDocPass = credentials[targetUser] || (targetUser === 'medico.care' ? 'abc123' : null);
-      if (!savedDocPass) {
-        const targetDoctor = doctors.find((d) => d.username === targetUser);
-        if (!targetDoctor) {
-          return 'Nome de usuário médico não localizado no cadastro do consultório.';
-        }
+      if (targetUser !== 'diego.dorim') {
+        return 'Nome de usuário médico não autorizado ou inexistente. Apenas o Dr. Diego possui cadastro ativo.';
+      }
+      if (customPassword !== '#Ddrd0408!') {
+        return 'Senha incorreta para acesso médico.';
       }
 
-      const targetDoctor = doctors.find((d) => d.username === targetUser) || (targetUser === 'medico.care' ? {
+      const targetDoctor: Doctor = {
         id: 'doctor_admin',
         firstName: 'Diego',
         lastName: 'Dorim',
-        username: 'medico.care',
+        username: 'diego.dorim',
         email: 'diego@dorim.com',
         crm: '123456-SP',
         requiresPasswordChange: false,
         createdAt: new Date().toISOString()
-      } : null);
+      };
 
-      if (!targetDoctor) {
-        return 'Dados de acesso do médico não puderam ser localizados.';
-      }
-
-      const expectedPassword = credentials[targetUser] || 'abc123';
-      if (customPassword === expectedPassword) {
-        setSession({
-          userId: targetDoctor.id,
-          username: targetDoctor.username,
-          role: 'doctor',
-          doctorDetails: targetDoctor
-        });
-        return null;
-      }
-      return 'Senha incorreta para acesso médico.';
+      setSession({
+        userId: targetDoctor.id,
+        username: targetDoctor.username,
+        role: 'doctor',
+        doctorDetails: targetDoctor
+      });
+      return null;
     }
 
     // 2. Patient Login
@@ -541,6 +532,44 @@ export default function App() {
     return updatedPatient;
   };
 
+  const syncWithSupabase = async () => {
+    try {
+      const schema = await checkSupabaseSchema();
+      if (schema.connected && !schema.tablesMissing) {
+        const [dbDocs, dbPats, dbLogs, dbConfs, dbCreds] = await Promise.all([
+          fetchDoctorsDB(),
+          fetchPatientsDB(),
+          fetchLogsDB(),
+          fetchConfirmationsDB(),
+          fetchCredentialsDB()
+        ]);
+        
+        if (dbPats.length > 0) {
+          setPatients(dbPats);
+          localStorage.setItem('clinical_patients', JSON.stringify(dbPats));
+        }
+        if (dbDocs.length > 0) {
+          setDoctors(dbDocs);
+          localStorage.setItem('clinical_doctors', JSON.stringify(dbDocs));
+        }
+        if (dbLogs.length > 0) {
+          setLogs(dbLogs);
+          localStorage.setItem('clinical_logs', JSON.stringify(dbLogs));
+        }
+        if (dbConfs.length > 0) {
+          setMedicationConfirmations(dbConfs);
+          localStorage.setItem('clinical_confirmations', JSON.stringify(dbConfs));
+        }
+        if (Object.keys(dbCreds).length > 0) {
+          setCredentials(dbCreds);
+          localStorage.setItem('clinical_credentials', JSON.stringify(dbCreds));
+        }
+      }
+    } catch (e: any) {
+      console.warn("Background sync failed:", e.message || String(e));
+    }
+  };
+
   const handleChangePassword = async (newPass: string) => {
     if (!session || session.role !== 'patient' || !session.patientDetails) return;
 
@@ -707,9 +736,8 @@ export default function App() {
       console.error(e);
     }
 
-    // Persist on Supabase in background
-    savePatientDB(updatedPatient)
-      .catch((err) => console.warn("Could not sync updated medications to Supabase:", err));
+    // Persist on Supabase and await to throw error if it fails
+    await savePatientDB(updatedPatient);
   };
 
   const handleConfirmMedication = async (confirmation: MedicationConfirmation) => {
@@ -760,6 +788,7 @@ export default function App() {
             onChangePassword={handleChangePassword}
             onAddLog={handleAddLog}
             onLogout={handleLogout}
+            onSyncData={syncWithSupabase}
           />
         )
       )}

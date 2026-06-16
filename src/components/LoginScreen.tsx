@@ -371,7 +371,7 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="block w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3 text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-teal-500 focus:ring-1 focus:ring-teal-500 sm:text-sm cursor-text"
-                    placeholder={role === 'doctor' ? 'Ex: medico.care' : 'Ex: ana.silva'}
+                    placeholder={role === 'doctor' ? 'Ex: diego.dorim' : 'Ex: ana.silva'}
                   />
                 </div>
               </div>
@@ -412,18 +412,6 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
                 >
                   Entrar no Consultório
                 </button>
-
-                {role === 'doctor' && (
-                  <div className="text-center pt-2 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => { setIsRegisteringDoctor(true); setDocRegError(null); }}
-                      className="text-xs font-semibold text-teal-600 hover:text-teal-700 underline cursor-pointer"
-                    >
-                      Não tem cadastro médico? Registre-se aqui
-                    </button>
-                  </div>
-                )}
               </div>
             </form>
           )}

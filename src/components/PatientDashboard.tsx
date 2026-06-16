@@ -16,7 +16,8 @@ import {
   User,
   ExternalLink,
   Bell,
-  Youtube
+  Youtube,
+  RefreshCw
 } from 'lucide-react';
 import { Patient, TrackingEntry, DiagnosticType, MedicationPrescription, MedicationConfirmation } from '../types';
 import { CLINICAL_CARE_PLANS } from '../data/carePlans';
@@ -44,6 +45,7 @@ interface PatientDashboardProps {
   onChangePassword: (newPass: string) => Promise<void>;
   onAddLog: (data: Record<string, any>, notes: string) => void;
   onLogout: () => void;
+  onSyncData?: () => Promise<void>;
 }
 
 export default function PatientDashboard({
@@ -53,8 +55,20 @@ export default function PatientDashboard({
   onConfirmMedication,
   onChangePassword,
   onAddLog,
-  onLogout
+  onLogout,
+  onSyncData
 }: PatientDashboardProps) {
+
+  // Auto-sync from Database on mount & every 5 seconds in background
+  React.useEffect(() => {
+    if (onSyncData) {
+      onSyncData().catch(err => console.warn("Initial sync failed", err));
+      const interval = setInterval(() => {
+        onSyncData().catch(err => console.warn("Background sync failed", err));
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [onSyncData]);
   // Password change states
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -599,10 +613,12 @@ export default function PatientDashboard({
         {/* Cronograma de Medicamentos Geral */}
         <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
           <div className="flex justify-between items-center border-b border-slate-100 pb-3 flex-wrap gap-2">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-              <Clock className="h-4.5 w-4.5 text-teal-600" />
-              💊 Cronograma de Medicamentos Diários
-            </h3>
+            <div className="flex items-center gap-3">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                <Clock className="h-4.5 w-4.5 text-teal-600" />
+                💊 Cronograma de Medicamentos Diários
+              </h3>
+            </div>
             <span className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-150 px-2.5 py-0.5 rounded-full font-mono">
               Hora de Brasília: {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </span>

@@ -15,7 +15,8 @@ import {
   TrendingUp,
   AlertCircle,
   Trash2,
-  Edit
+  Edit,
+  RefreshCw
 } from 'lucide-react';
 import { Patient, DiagnosticType, TrackingEntry, MedicationPrescription, MedicationConfirmation } from '../types';
 import { CLINICAL_CARE_PLANS } from '../data/carePlans';
@@ -24,7 +25,7 @@ interface DoctorDashboardProps {
   patients: Patient[];
   logs: TrackingEntry[];
   medicationConfirmations: MedicationConfirmation[];
-  onUpdatePatientMedications: (patientId: string, medications: MedicationPrescription[]) => void;
+  onUpdatePatientMedications: (patientId: string, medications: MedicationPrescription[]) => Promise<void>;
   onAddPatient: (firstName: string, lastName: string, diagnostic: DiagnosticType) => Patient;
   onUpdatePatient: (patientId: string, firstName: string, lastName: string, diagnostic: DiagnosticType) => void;
   onDeletePatient: (id: string) => void;
@@ -82,6 +83,8 @@ export default function DoctorDashboard({
   const [newMedName, setNewMedName] = useState('');
   const [newMedDosage, setNewMedDosage] = useState('');
   const [newMedTime, setNewMedTime] = useState('08:00');
+  const [isSyncingMedication, setIsSyncingMedication] = useState(false);
+  const [syncStatusMessage, setSyncStatusMessage] = useState<string | null>(null);
 
   // Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -120,9 +123,12 @@ export default function DoctorDashboard({
     setDiagnostic('Enxaqueca');
   };
 
-  const handleAddMedication = (e: React.FormEvent) => {
+  const handleAddMedication = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPatientId || !newMedName.trim() || !newMedDosage.trim()) return;
+    if (!selectedPatientId || !newMedName.trim() || !newMedDosage.trim() || isSyncingMedication) return;
+
+    setIsSyncingMedication(true);
+    setSyncStatusMessage(null);
 
     const currentMedications = selectedPatient?.medications || [];
     const newMed: MedicationPrescription = {
@@ -133,19 +139,44 @@ export default function DoctorDashboard({
     };
 
     const updatedMeds = [...currentMedications, newMed];
-    onUpdatePatientMedications(selectedPatientId, updatedMeds);
-
-    // Reset fields
-    setNewMedName('');
-    setNewMedDosage('');
-    setNewMedTime('08:00');
+    try {
+      await onUpdatePatientMedications(selectedPatientId, updatedMeds);
+      setSyncStatusMessage('Medicamento cadastrado e sincronizado com o paciente!');
+      // Reset fields
+      setNewMedName('');
+      setNewMedDosage('');
+      setNewMedTime('08:00');
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMessage('Erro ao sincronizar. Verifique a conexão.');
+    } finally {
+      setIsSyncingMedication(false);
+      setTimeout(() => {
+        setSyncStatusMessage(null);
+      }, 4000);
+    }
   };
 
-  const handleRemoveMedication = (medId: string) => {
-    if (!selectedPatientId) return;
+  const handleRemoveMedication = async (medId: string) => {
+    if (!selectedPatientId || isSyncingMedication) return;
+
+    setIsSyncingMedication(true);
+    setSyncStatusMessage(null);
+
     const currentMedications = selectedPatient?.medications || [];
     const updatedMeds = currentMedications.filter((m) => m.id !== medId);
-    onUpdatePatientMedications(selectedPatientId, updatedMeds);
+    try {
+      await onUpdatePatientMedications(selectedPatientId, updatedMeds);
+      setSyncStatusMessage('Medicamento removido e alteração sincronizada!');
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMessage('Erro ao sincronizar remoção.');
+    } finally {
+      setIsSyncingMedication(false);
+      setTimeout(() => {
+        setSyncStatusMessage(null);
+      }, 4000);
+    }
   };
 
   const handleSendDoctorNotification = async (patientId: string, patientName: string, customText?: string) => {
@@ -455,10 +486,48 @@ export default function DoctorDashboard({
               
               {/* Coluna 1: Prescrever Medicamentos */}
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <Activity className="h-5 w-5 text-teal-600" />
-                  💊 Prescrição de Medicamentos
-                </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-teal-600" />
+                    💊 Prescrição de Medicamentos
+                  </h3>
+                  
+                  <div className="flex items-center gap-2">
+                    {syncStatusMessage && (
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        syncStatusMessage.includes('Erro') 
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200 animate-pulse' 
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      }`}>
+                        {syncStatusMessage}
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (isSyncingMedication || !selectedPatientId) return;
+                        setIsSyncingMedication(true);
+                        setSyncStatusMessage(null);
+                        try {
+                          await onUpdatePatientMedications(selectedPatientId, selectedPatient?.medications || []);
+                          setSyncStatusMessage('Sincronizado com o paciente!');
+                        } catch (err) {
+                          setSyncStatusMessage('Erro ao sincronizar.');
+                        } finally {
+                          setIsSyncingMedication(false);
+                          setTimeout(() => setSyncStatusMessage(null), 4000);
+                        }
+                      }}
+                      disabled={isSyncingMedication}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 disabled:opacity-60 rounded-full border border-teal-200 transition cursor-pointer"
+                      title="Sincronizar receita de medicamentos com o paciente"
+                    >
+                      <RefreshCw className={`h-3 w-3 ${isSyncingMedication ? "animate-spin" : ""}`} />
+                      Sincronizar
+                    </button>
+                  </div>
+                </div>
                 
                 {/* Lista de Medicamentos Prescritos Atualmente */}
                 <div className="space-y-3">
@@ -533,9 +602,17 @@ export default function DoctorDashboard({
                     </div>
                     <button
                       type="submit"
-                      className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs px-4 py-2 transition shadow-sm hover:shadow"
+                      disabled={isSyncingMedication}
+                      className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs px-4 py-2 transition shadow-sm hover:shadow flex items-center gap-1.5 disabled:opacity-50"
                     >
-                      Prescrever
+                      {isSyncingMedication ? (
+                        <>
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          Sincronizando...
+                        </>
+                      ) : (
+                        "Cadastrar e Sincronizar"
+                      )}
                     </button>
                   </div>
                 </form>
