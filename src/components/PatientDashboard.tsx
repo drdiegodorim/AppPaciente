@@ -1118,36 +1118,137 @@ export default function PatientDashboard({
 
             {/* YouTube Material */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-              <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2 text-sm">
-                <Youtube className="h-4.5 w-4.5 text-rose-600" />
-                🎥 Material de Estudo do Instituto
-              </h3>
-
-              <div className="rounded-xl border border-rose-100 bg-rose-50/15 p-4 text-center space-y-3.5 relative overflow-hidden group">
-                {/* Subtle background glow */}
-                <div className="absolute top-0 right-0 -translate-y-1/3 translate-x-1/3 h-24 w-24 rounded-full bg-rose-200/25 blur-xl pointer-events-none" />
-                
-                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600 transition-transform duration-300 group-hover:scale-105">
-                  <Youtube className="h-5.5 w-5.5 fill-rose-600 stroke-[1.5]" />
-                </div>
-
-                <div className="space-y-1.5 text-left">
-                  <h4 className="text-xs font-extrabold text-slate-800 text-center">Nosso Canal de Vídeos e Exercícios</h4>
-                  <p className="text-[11px] text-slate-500 leading-relaxed text-center">
-                    Acesse o canal oficial do <strong>Instituto Diego Dorim</strong> no YouTube para assistir a vídeos de reabilitação física, exercícios terapêuticos e orientações complementares recomendados para elevar a eficácia de seu tratamento.
-                  </p>
-                </div>
-
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                  <Youtube className="h-4.5 w-4.5 text-rose-600" />
+                  🎥 Material de Estudo do Instituto
+                </h3>
                 <a
                   href="https://www.youtube.com/@InstitutoDiegoDorim"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[11px] font-bold py-2.5 px-4 transition-all duration-200 shadow-sm shadow-rose-100 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-rose-600 hover:text-rose-700 font-bold text-[11px] transition"
                 >
-                  <Play className="h-3 w-3 fill-white" />
-                  Acessar Canal do YouTube
+                  Canal Oficial no YouTube <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </div>
+
+              {/* Videos tabs state management */}
+              {(() => {
+                const [activeStudyTab, setActiveStudyTab] = useState<'patient' | 'companion'>('patient');
+                const allVideos = carePlan?.videos || [];
+                const patientVideos = allVideos.filter(v => v.audience === 'patient' || !v.audience);
+                const companionVideos = allVideos.filter(v => v.audience === 'companion');
+
+                return (
+                  <div className="space-y-4">
+                    {/* Tab Selectors */}
+                    <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-1 border border-slate-150">
+                      <button
+                        type="button"
+                        onClick={() => setActiveStudyTab('patient')}
+                        className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all duration-200 cursor-pointer ${
+                          activeStudyTab === 'patient'
+                            ? 'bg-white text-teal-800 shadow-sm border border-slate-100'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <User className="h-4 w-4" />
+                        Sessão do Paciente ({patientVideos.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveStudyTab('companion')}
+                        className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all duration-200 cursor-pointer ${
+                          activeStudyTab === 'companion'
+                            ? 'bg-white text-teal-800 shadow-sm border border-slate-100'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <Heart className="h-4 w-4" />
+                        Sessão do Acompanhante ({companionVideos.length})
+                      </button>
+                    </div>
+
+                    {/* Explanatory subtitle */}
+                    <div className="text-[11px] text-slate-500 leading-relaxed bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                      {activeStudyTab === 'patient' ? (
+                        <p>
+                          <strong>Vídeos Essenciais de Autocuidado:</strong> Exercícios, deparação técnica, explicações de sintomas e rotinas diárias guiadas para potencializar sua evolução individual.
+                        </p>
+                      ) : (
+                        <p>
+                          <strong>Educação para Familiares, Cuidadores e Parceiros:</strong> Guias de segurança, ergonomia de transferências em casa, primeiros socorros de crises e modulação comportamental segura.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Video list render */}
+                    <div className="space-y-3">
+                      {(activeStudyTab === 'patient' ? patientVideos : companionVideos).length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/30 p-6 text-center">
+                          <Video className="h-8 w-8 text-slate-350 mx-auto mb-2" />
+                          <p className="text-xs font-bold text-slate-700">Canal Geral de Exercícios</p>
+                          <p className="text-[11px] text-slate-400 mt-1 max-w-[280px] mx-auto">
+                            Consulte nosso canal geral do YouTube para tutoriais e vídeos complementares adicionais.
+                          </p>
+                        </div>
+                      ) : (
+                        (activeStudyTab === 'patient' ? patientVideos : companionVideos).map((video) => (
+                          <div
+                            key={video.id}
+                            className="group flex flex-col md:flex-row gap-4.5 rounded-xl border border-slate-150 bg-white p-3.5 hover:border-teal-200 hover:shadow-xs transition-all duration-200"
+                          >
+                            {/* Video Thumbnail */}
+                            <div className="relative w-full md:w-36 h-24 rounded-lg overflow-hidden bg-slate-100 shrink-0 shadow-xs border border-slate-100">
+                              <img
+                                src={video.thumbnailUrl}
+                                referrerPolicy="no-referrer"
+                                alt={video.title}
+                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/25 flex items-center justify-center transition-all">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-rose-600 shadow-md group-hover:scale-110 transition duration-200">
+                                  <Play className="h-3 w-3 fill-rose-600 stroke-none ml-0.5" />
+                                </div>
+                              </div>
+                              <span className="absolute bottom-1 right-1 bg-slate-900/80 px-1.5 py-0.5 rounded text-[8px] font-bold font-mono text-white">
+                                {video.duration}
+                              </span>
+                            </div>
+
+                            {/* Video details text */}
+                            <div className="flex flex-col justify-between flex-1 min-w-0 space-y-1.5">
+                              <div>
+                                <h4 className="text-[12px] font-extrabold text-slate-800 leading-snug group-hover:text-teal-700 transition">
+                                  {video.title}
+                                </h4>
+                                <p className="text-[11px] text-slate-500 leading-relaxed mt-1 line-clamp-2">
+                                  {video.description}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-1">
+                                <span className="inline-flex items-center gap-1 text-[10px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-sm">
+                                  {activeStudyTab === 'patient' ? '👤 Paciente' : '👥 Acompanhante / Familiar'}
+                                </span>
+                                <a
+                                  href={video.youtubeUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-teal-600 hover:text-teal-700 font-bold text-[10px] transition cursor-pointer"
+                                >
+                                  Assistir Vídeo <ExternalLink className="h-3 w-3" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Medical Guidelines Card */}

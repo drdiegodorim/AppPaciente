@@ -331,56 +331,52 @@ export default function App() {
     }
   }, []);
 
-  const handleLogin = (username: string, role: 'doctor' | 'patient', customPassword?: string): string | null => {
+  const handleLogin = (username: string, role?: 'doctor' | 'patient', customPassword?: string): string | null => {
     const targetUser = username.trim().toLowerCase();
 
-    // 1. Doctor Login
-    if (role === 'doctor') {
-      if (targetUser !== 'diego.dorim') {
-        return 'Nome de usuário médico não autorizado ou inexistente. Apenas o Dr. Diego possui cadastro ativo.';
+    // Auto-detect role by searching both doctors and patients
+    const foundDoctor = doctors.find((d) => d.username.toLowerCase() === targetUser);
+    const foundPatient = patients.find((p) => p.username.toLowerCase() === targetUser);
+
+    if (foundDoctor) {
+      let correctPass = credentials[targetUser];
+      if (!correctPass) {
+        if (targetUser === 'diego.dorim') {
+          correctPass = '#Ddrd0408!';
+        } else {
+          correctPass = 'abc123';
+        }
       }
-      if (customPassword !== '#Ddrd0408!') {
+
+      if (customPassword !== correctPass) {
         return 'Senha incorreta para acesso médico.';
       }
 
-      const targetDoctor: Doctor = {
-        id: 'doctor_admin',
-        firstName: 'Diego',
-        lastName: 'Dorim',
-        username: 'diego.dorim',
-        email: 'diego@dorim.com',
-        crm: '123456-SP',
-        requiresPasswordChange: false,
-        createdAt: new Date().toISOString()
-      };
-
       setSession({
-        userId: targetDoctor.id,
-        username: targetDoctor.username,
+        userId: foundDoctor.id,
+        username: foundDoctor.username,
         role: 'doctor',
-        doctorDetails: targetDoctor
+        doctorDetails: foundDoctor
       });
       return null;
     }
 
-    // 2. Patient Login
-    const targetPatient = patients.find((p) => p.username === targetUser);
-    if (!targetPatient) {
-      return 'Nome de usuário não localizado no cadastro do consultório.';
-    }
+    if (foundPatient) {
+      const currentPass = credentials[targetUser] || 'abc123';
+      if (customPassword !== currentPass) {
+        return 'Senha incorreta para este usuário.';
+      }
 
-    const currentPass = credentials[targetUser] || 'abc123';
-    if (customPassword === currentPass) {
       setSession({
-        userId: targetPatient.id,
-        username: targetPatient.username,
+        userId: foundPatient.id,
+        username: foundPatient.username,
         role: 'patient',
-        patientDetails: targetPatient
+        patientDetails: foundPatient
       });
       return null;
     }
 
-    return 'Senha incorreta para este usuário.';
+    return 'Nome de usuário não localizado no cadastro do consultório.';
   };
 
   const handleLogout = () => {

@@ -31,6 +31,7 @@ export interface YouTubeVideo {
   thumbnailUrl: string;
   youtubeUrl: string;
   description: string;
+  audience?: 'patient' | 'companion';
 }
 
 export interface TrackerField {

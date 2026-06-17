@@ -439,7 +439,7 @@ Ficamos no aguardo de sua confirmação. Abraços.`;
             {/* Grid details and chart */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Care Guidelines Details */}
-              <div className="lg:col-span-1 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+              <div className={`${selectedPatient.diagnostic === 'Enxaqueca' ? 'lg:col-span-1' : 'lg:col-span-3'} rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4`}>
                 <h3 className="font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
                   <FileText className="h-5 w-5 text-teal-600" />
                   Estratégia Diagnóstica
@@ -462,7 +462,7 @@ Ficamos no aguardo de sua confirmação. Abraços.`;
               </div>
 
               {/* Patient evolution charts or ICHD-3 Migraine Dashboard */}
-              {selectedPatient.diagnostic === 'Enxaqueca' ? (
+              {selectedPatient.diagnostic === 'Enxaqueca' && (
                 (() => {
                   const now = new Date();
                   const thirtyDaysAgo = new Date();
@@ -721,144 +721,6 @@ Ficamos no aguardo de sua confirmação. Abraços.`;
                     </div>
                   );
                 })()
-              ) : (
-                <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-2 justify-between">
-                    <span className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-teal-600" />
-                      Curva Gráfica de Evolução dos Sintomas
-                    </span>
-                    <span className="text-xs text-slate-400 font-medium">Histórico Recente</span>
-                  </h3>
-
-                  {selectedPatientLogs.length === 0 ? (
-                    <div className="flex h-48 flex-col items-center justify-center text-center rounded-xl bg-slate-50 border border-dashed border-slate-200 p-6">
-                      <Activity className="h-10 w-10 text-slate-300 animate-pulse mb-2" />
-                      <p className="text-sm font-semibold text-slate-600">Sem diários registrados ainda</p>
-                      <p className="text-xs text-slate-400 max-w-[280px] mt-1">O paciente aparecerá nessa curva à medida que fizer logs diários no aplicativo.</p>
-                    </div>
-                  ) : (
-                    <div>
-                    {/* Render elegant SVG Chart based on selected condition variables */}
-                    {/* For conditions like Migraine or Bruxismo or Cervical Dystonia we can chart the 1-10 pain/stiffness level scale */}
-                    {(() => {
-                      // Let's identify the metric to chart
-                      const config = CLINICAL_CARE_PLANS[selectedPatient.diagnostic]?.trackerConfig;
-                      const numericField = config?.fields.find(f => f.type === 'scale') || config?.fields.find(f => f.type === 'number');
-
-                      if (numericField) {
-                        const fieldId = numericField.id;
-                        const dataPoints = [...selectedPatientLogs]
-                          .reverse() // Chronological order
-                          .map((log) => ({
-                            date: new Date(log.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-                            val: Number(log.data[fieldId]) || 0
-                          }));
-
-                        const maxScale = numericField.max || 10;
-                        const svgWidth = 500;
-                        const svgHeight = 160;
-                        const padding = 30;
-
-                        // Create points
-                        const points = dataPoints.map((pt, index) => {
-                          const x = padding + (index * (svgWidth - padding * 2)) / Math.max(1, dataPoints.length - 1);
-                          const y = svgHeight - padding - (pt.val * (svgHeight - padding * 2)) / maxScale;
-                          return { x, y, pt };
-                        });
-
-                        const pointsString = points.map(p => `${p.x},${p.y}`).join(' ');
-
-                        return (
-                          <div className="space-y-3">
-                            <span className="inline-block text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-medium">
-                              Mapeando: {numericField.label}
-                            </span>
-                            <div className="relative w-full overflow-x-auto bg-slate-50 rounded-xl p-3 border border-slate-100">
-                              <svg className="w-full min-w-[400px] h-44" viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
-                                {/* Grid lines */}
-                                {[0, 0.25, 0.5, 0.75, 1].map((pRatio, i) => {
-                                  const y = padding + pRatio * (svgHeight - padding * 2);
-                                  const valLabel = Math.round(maxScale - pRatio * maxScale);
-                                  return (
-                                    <g key={i} opacity="0.15">
-                                      <line x1={padding} y1={y} x2={svgWidth - padding} y2={y} stroke="#047857" strokeWidth="1" strokeDasharray="3" />
-                                      <text x={padding - 5} y={y + 4} textAnchor="end" fontSize="9" fill="#1e293b" className="font-mono">{valLabel}</text>
-                                    </g>
-                                  );
-                                })}
-
-                                {/* Line path */}
-                                {points.length > 1 && (
-                                  <polyline
-                                    fill="none"
-                                    stroke="#0d9488"
-                                    strokeWidth="3"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    points={pointsString}
-                                    className="drop-shadow-sm"
-                                  />
-                                )}
-
-                                {/* Under gradient */}
-                                {points.length > 1 && (
-                                  <polygon
-                                    fill="rgba(13, 148, 136, 0.08)"
-                                    points={`${points[0].x},${svgHeight - padding} ${pointsString} ${points[points.length - 1].x},${svgHeight - padding}`}
-                                  />
-                                )}
-
-                                {/* Point circles & value badges */}
-                                {points.map((p, i) => (
-                                  <g key={i}>
-                                    <circle cx={p.x} cy={p.y} r="4" fill="#0d9488" className="cursor-pointer" />
-                                    <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize="10" className="font-bold font-mono" fill="#0f172a">
-                                      {p.pt.val}
-                                    </text>
-                                    <text x={p.x} y={svgHeight - 10} textAnchor="middle" fontSize="8" fill="#64748b" className="font-mono font-medium">
-                                      {p.pt.date}
-                                    </text>
-                                  </g>
-                                ))}
-                              </svg>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      // Fallback when there is no scale fields (e.g. epilepsy seizures counts or drooling list)
-                      const seizureField = config?.fields.find(f => f.id === 'seizureCount' || f.id === 'seizures') || config?.fields[0];
-                      if (seizureField) {
-                        return (
-                          <div className="space-y-2">
-                            <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">Monitoramento de Ocorrências Diárias</span>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                              {selectedPatientLogs.slice(0, 8).map((log, idx) => {
-                                const lVal = log.data[seizureField.id];
-                                return (
-                                  <div key={idx} className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col justify-between">
-                                    <span className="text-[10px] text-slate-400 font-mono">
-                                      {new Date(log.timestamp).toLocaleDateString()}
-                                    </span>
-                                    <span className="text-sm font-bold text-slate-700 mt-1 truncate">
-                                      {typeof lVal === 'boolean' ? (lVal ? 'Sim' : 'Não') : String(lVal)}
-                                    </span>
-                                    <span className="text-[9px] text-teal-600 mt-1 uppercase font-semibold">
-                                      {seizureField.label.split(' ')[0]}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-                )}
-                </div>
               )}
             </div>
 

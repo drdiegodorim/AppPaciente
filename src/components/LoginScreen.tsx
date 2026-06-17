@@ -4,7 +4,7 @@ import { Patient, Doctor } from '../types';
 import { SupabaseSchemaStatus } from '../lib/supabase';
 
 interface LoginScreenProps {
-  onLogin: (username: string, role: 'doctor' | 'patient', customPassword?: string) => string | null;
+  onLogin: (username: string, role?: 'doctor' | 'patient', customPassword?: string) => string | null;
   patients: Patient[];
   onRegisterDoctor: (firstName: string, lastName: string, email: string, crm: string) => Promise<Doctor>;
   supabaseStatus: SupabaseSchemaStatus;
@@ -101,9 +101,9 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
       return;
     }
 
-    // Try to login
-    const targetUsername = role === 'doctor' ? username.trim() : username.trim().toLowerCase();
-    const loginError = onLogin(targetUsername, role, password);
+    // Try to login using unified lowercased username
+    const targetUsername = username.trim().toLowerCase();
+    const loginError = onLogin(targetUsername, undefined, password);
     if (loginError) {
       setError(loginError);
     }
@@ -185,36 +185,6 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
             Acompanhamento Clínico & Plano de Cuidado Individualizado
           </p>
         </div>
-
-        {/* Role Toggle Selector */}
-        {!isRegisteringDoctor && (
-          <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
-            <button
-              type="button"
-              onClick={() => { setRole('patient'); setError(null); }}
-              className={`flex items-center justify-center gap-2 rounded-md py-2.5 text-sm font-medium transition-all duration-200 ${
-                role === 'patient'
-                  ? 'bg-white text-teal-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-800'
-              }`}
-            >
-              <User className="h-4 w-4" />
-              Acesso Paciente
-            </button>
-            <button
-              type="button"
-              onClick={() => { setRole('doctor'); setError(null); }}
-              className={`flex items-center justify-center gap-2 rounded-md py-2.5 text-sm font-medium transition-all duration-200 ${
-                role === 'doctor'
-                  ? 'bg-white text-teal-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-800'
-              }`}
-            >
-              <Shield className="h-4 w-4" />
-              Acesso Médico
-            </button>
-          </div>
-        )}
 
         <div className="bg-white px-8 py-8 shadow-md rounded-2xl border border-slate-100">
           {/* 1. Doctor Registration Form */}
@@ -372,7 +342,7 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="username" className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  {role === 'doctor' ? 'Usuário Médico' : 'Nome de Usuário (nome.sobrenome)'}
+                  Nome de Usuário (médico ou paciente)
                 </label>
                 <div className="relative mt-2 rounded-md shadow-sm">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -385,7 +355,7 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="block w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3 text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-teal-500 focus:ring-1 focus:ring-teal-500 sm:text-sm cursor-text"
-                    placeholder={role === 'doctor' ? 'Ex: diego.dorim' : 'Ex: ana.silva'}
+                    placeholder="Ex: diego.dorim ou ana.silva"
                   />
                 </div>
               </div>
@@ -393,7 +363,7 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
               <div>
                 <div className="flex items-center justify-between">
                   <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Senha
+                    Senha de Segurança
                   </label>
                 </div>
                 <div className="relative mt-2 rounded-md shadow-sm">
@@ -407,7 +377,7 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="block w-full rounded-xl border border-slate-200 py-3 pl-10 pr-3 text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-teal-500 focus:ring-1 focus:ring-teal-500 sm:text-sm cursor-text"
-                    placeholder="Selecione ou digite sua senha"
+                    placeholder="Digite sua senha de acesso"
                   />
                 </div>
               </div>
@@ -428,7 +398,7 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
                 </button>
               </div>
 
-              {role === 'patient' && onSyncData && (
+              {onSyncData && (
                 <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-[11px] text-slate-500">Deseja atualizar dados de acesso?</span>
                   <button

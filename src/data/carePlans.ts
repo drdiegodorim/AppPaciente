@@ -24,7 +24,8 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '12:45',
         thumbnailUrl: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_migraine_1',
-        description: 'Aprenda sobre o pródromo, aura, fase de dor e pósdromo, e como atuar em cada uma delas para mitigar os sintomas.'
+        description: 'Aprenda sobre o pródromo, aura, fase de dor e pósdromo, e como atuar em cada uma delas para mitigar os sintomas.',
+        audience: 'patient'
       },
       {
         id: '2',
@@ -32,7 +33,8 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '08:15',
         thumbnailUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_migraine_2',
-        description: 'Exercícios específicos guiados para liberar a musculatura do trapézio e suboccipitais, que frequentemente agravam crises.'
+        description: 'Exercícios específicos guiados para liberar a musculatura do trapézio e suboccipitais, que frequentemente agravam crises.',
+        audience: 'patient'
       },
       {
         id: '3',
@@ -40,7 +42,17 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '10:30',
         thumbnailUrl: 'https://images.unsplash.com/photo-1511295742364-92767fa62d9f?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_migraine_3',
-        description: 'Passo a passo prático para criar um ritual de desaceleração noturna e melhorar a estabilidade do limiar da dor.'
+        description: 'Passo a passo prático para criar um ritual de desaceleração noturna e melhorar a estabilidade do limiar da dor.',
+        audience: 'patient'
+      },
+      {
+        id: '4',
+        title: 'Como Apoiar um Familiar com Crise de Enxaqueca',
+        duration: '06:50',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80',
+        youtubeUrl: 'https://www.youtube.com/watch?v=mock_migraine_4',
+        description: 'Aprenda a criar um ambiente de baixo estímulo (luz/som) e dar suporte terapêutico e emocional durante episódios agudos.',
+        audience: 'companion'
       }
     ],
     trackerConfig: {
@@ -138,7 +150,8 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '11:20',
         thumbnailUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_parkinson_1',
-        description: 'Técnicas clínicas baseadas em pistas de metrônomo e redirecionamento de重心 para superar com segurança e sem desequilíbrios a hesitação de marcha.'
+        description: 'Técnicas clínicas baseadas em pistas de metrônomo e redirecionamento de重心 para superar com segurança e sem desequilíbrios a hesitação de marcha.',
+        audience: 'companion'
       },
       {
         id: 'p2',
@@ -146,7 +159,17 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '14:30',
         thumbnailUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_parkinson_2',
-        description: 'Sequência dinâmica projetada por fisioterapeutas especialistas na área de neurofuncional para fortalecimento de quadríceps e estabilização de pelve.'
+        description: 'Sequência dinâmica projetada por fisioterapeutas especialistas na área de neurofuncional para fortalecimento de quadríceps e estabilização de pelve.',
+        audience: 'patient'
+      },
+      {
+        id: 'p3',
+        title: 'Guia de Transferências e Auxílio na Mobilidade para Familiares',
+        duration: '09:15',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80',
+        youtubeUrl: 'https://www.youtube.com/watch?v=mock_parkinson_3',
+        description: 'Como auxiliar o paciente a levantar-se da cama ou cadeira com segurança e ergonomia técnica para o cuidador.',
+        audience: 'companion'
       }
     ],
     trackerConfig: {
@@ -173,7 +196,8 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '15:10',
         thumbnailUrl: 'https://images.unsplash.com/photo-1516307361142-ff5d18153c1e?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_demencia_1',
-        description: 'Dicas práticas de como lidar com flutuações, perguntas repetitivas e teimosias sem gerar embates agressivos.'
+        description: 'Dicas práticas de como lidar com flutuações, perguntas repetitivas e teimosias sem gerar embates agressivos.',
+        audience: 'companion'
       },
       {
         id: 'd2',
@@ -181,7 +205,17 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '10:45',
         thumbnailUrl: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_demencia_2',
-        description: 'Tour por residência mostrando adaptações econômicas cruciais no banheiro, quarto e sala para dar total segurança.'
+        description: 'Tour por residência mostrando adaptações econômicas cruciais no banheiro, quarto e sala para dar total segurança.',
+        audience: 'companion'
+      },
+      {
+        id: 'd3',
+        title: 'Exercícios Livres para Estimulação Cognitiva Leve',
+        duration: '08:20',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?auto=format&fit=crop&w=600&q=80',
+        youtubeUrl: 'https://www.youtube.com/watch?v=mock_demencia_3',
+        description: 'Atividades guiadas lúdicas, músicas e quebra-cabeças visuais simples que o paciente pode desfrutar em fases iniciais.',
+        audience: 'patient'
       }
     ],
     trackerConfig: {
@@ -208,7 +242,8 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '09:12',
         thumbnailUrl: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_epilepsia_1',
-        description: 'Orientações claras para familiares e cuidadores sobre o que fazer e o que não fazer durante uma crise convulsiva tônico-clônica.'
+        description: 'Orientações claras para familiares e cuidadores sobre o que fazer e o que não fazer durante uma crise convulsiva tônico-clônica.',
+        audience: 'companion'
       },
       {
         id: 'ep2',
@@ -216,7 +251,8 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '12:05',
         thumbnailUrl: 'https://images.unsplash.com/photo-1511295742364-92767fa62d9f?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_epilepsia_2',
-        description: 'Esclarecimento detalhado de gatilhos como estresse agudo, febre corporal elevada e privações persistentes do descanso.'
+        description: 'Esclarecimento detalhado de gatilhos como estresse agudo, febre corporal elevada e privações persistentes do descanso.',
+        audience: 'patient'
       }
     ],
     trackerConfig: {
@@ -243,7 +279,17 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '13:50',
         thumbnailUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_espasticidade_1',
-        description: 'Guia visual demonstrando o correto posicionamento e manuseio delicado das articulações espásticas para evitar dor.'
+        description: 'Guia visual demonstrando o correto posicionamento e manuseio delicado das articulações espásticas para evitar dor.',
+        audience: 'companion'
+      },
+      {
+        id: 'es2',
+        title: 'Exercícios de Alongamento Ativo para Autonomia',
+        duration: '09:30',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80',
+        youtubeUrl: 'https://www.youtube.com/watch?v=mock_espasticidade_2',
+        description: 'Sequência leve de movimentos ativos que o paciente pode tentar realizar de forma independente para aliviar a tensão diária.',
+        audience: 'patient'
       }
     ],
     trackerConfig: {
@@ -270,7 +316,17 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '07:44',
         thumbnailUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_bruxismo_1',
-        description: 'Sequência anatômica de deslizamento digital e pontos de pressão miorisofasciais para desprogramar a musculatura de ATM.'
+        description: 'Sequência anatômica de deslizamento digital e pontos de pressão miorisofasciais para desprogramar a musculatura de ATM.',
+        audience: 'patient'
+      },
+      {
+        id: 'b2',
+        title: 'Alívio de Pontos de Gatilho e Massagem no Pescoço para Familiares',
+        duration: '06:15',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=600&q=80',
+        youtubeUrl: 'https://www.youtube.com/watch?v=mock_bruxismo_2',
+        description: 'Massagem terapêutica complementar que familiares podem aplicar na região cervical para amortecer dores de cabeça tensionais secundárias ao bruxismo.',
+        audience: 'companion'
       }
     ],
     trackerConfig: {
@@ -297,7 +353,17 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '10:20',
         thumbnailUrl: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_distonia_c_1',
-        description: 'Estudos de caso reais de pacientes mostrando como mecanismos táteis corretivos aliviam temporariamente desvios posturais.'
+        description: 'Estudos de caso reais de pacientes mostrando como mecanismos táteis corretivos aliviam temporariamente desvios posturais.',
+        audience: 'patient'
+      },
+      {
+        id: 'dc2',
+        title: 'Adaptação Ergonômica Domiciliar e Suportes de Pescoço',
+        duration: '08:40',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80',
+        youtubeUrl: 'https://www.youtube.com/watch?v=mock_distonia_c_2',
+        description: 'Guia para acompanhantes sobre posicionamento confortável de travesseiros, apoios de nuca e ergonomia ideal de descanso para o familiar.',
+        audience: 'companion'
       }
     ],
     trackerConfig: {
@@ -324,7 +390,17 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '08:50',
         thumbnailUrl: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_distonia_f_1',
-        description: 'Técnicas de modulação sensorial orbitária e fotoproteção para otimizar os períodos funcionais palpebrais.'
+        description: 'Técnicas de modulação sensorial orbitária e fotoproteção para otimizar os períodos funcionais palpebrais.',
+        audience: 'patient'
+      },
+      {
+        id: 'df2',
+        title: 'Como Apoiar na Comunicação sem Constrangimento Social',
+        duration: '07:15',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1516307361142-ff5d18153c1e?auto=format&fit=crop&w=600&q=80',
+        youtubeUrl: 'https://www.youtube.com/watch?v=mock_distonia_f_2',
+        description: 'Conselhos práticos detalhando como familiares e parceiros podem auxiliar a socialização sem julgamentos ou pressão conversacional.',
+        audience: 'companion'
       }
     ],
     trackerConfig: {
@@ -351,7 +427,17 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '14:15',
         thumbnailUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_distonia_foc_1',
-        description: 'Estratégias inovadoras baseadas em desvinculação cortical e reprogramação de movimentos isolados sem co-contração.'
+        description: 'Estratégias inovadoras baseadas em desvinculação cortical e reprogramação de movimentos isolados sem co-contração.',
+        audience: 'patient'
+      },
+      {
+        id: 'dfoc2',
+        title: 'Desenvolvimento e Fixação de Engrossadores de Utensílios',
+        duration: '07:30',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80',
+        youtubeUrl: 'https://www.youtube.com/watch?v=mock_distonia_foc_2',
+        description: 'Ideias criativas e baratas de como familiares podem adaptar talheres, copos e canetas com espuma para reduzir a carga proprioceptiva na mão afetada.',
+        audience: 'companion'
       }
     ],
     trackerConfig: {
@@ -378,7 +464,17 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
         duration: '09:40',
         thumbnailUrl: 'https://images.unsplash.com/photo-1516307361142-ff5d18153c1e?auto=format&fit=crop&w=600&q=80',
         youtubeUrl: 'https://www.youtube.com/watch?v=mock_sialorreia_1',
-        description: 'Métodos recomendados por fonoaudiólogos especializados para sincronizar engolir voluntariamente com alarmes discretos silenciosos.'
+        description: 'Métodos recomendados por fonoaudiólogos especializados para sincronizar engolir voluntariamente com alarmes discretos silenciosos.',
+        audience: 'patient'
+      },
+      {
+        id: 'sial2',
+        title: 'Cuidados com a Barreira de Pele Perioral e Higiene Nutricional',
+        duration: '08:10',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1573884199692-66176a00c4b3?auto=format&fit=crop&w=600&q=80',
+        youtubeUrl: 'https://www.youtube.com/watch?v=mock_sialorreia_2',
+        description: 'Orientações práticas para familiares limparem e protegerem a zona perioral com pomadas de barreira, prevenindo inflamações incômodas.',
+        audience: 'companion'
       }
     ],
     trackerConfig: {
