@@ -155,8 +155,8 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
   const selectDoctorPreset = () => {
     setRole('doctor');
     setIsRegisteringDoctor(false);
-    setUsername('medico.care');
-    setPassword('senha123');
+    setUsername('diego.dorim');
+    setPassword('#Ddrd0408!');
     setError(null);
   };
 

@@ -254,7 +254,7 @@ export default function App() {
               id: 'doctor_admin',
               firstName: 'Diego',
               lastName: 'Dorim',
-              username: 'medico.care',
+              username: 'diego.dorim',
               email: 'diego@dorim.com',
               crm: '123456-SP',
               requiresPasswordChange: false,
@@ -288,7 +288,7 @@ export default function App() {
             localStorage.setItem('clinical_credentials', JSON.stringify(dbCreds));
           } else {
             const initialPasswords: Record<string, string> = {
-              'medico.care': 'abc123',
+              'diego.dorim': '#Ddrd0408!',
               'ana.silva': 'abc123',
               'carlos.oliveira': 'abc123',
               'beatriz.costa': 'abc123',

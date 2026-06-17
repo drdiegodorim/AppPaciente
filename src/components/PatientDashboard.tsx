@@ -139,7 +139,7 @@ export default function PatientDashboard({
   // Sync medications and register Service Worker on mount
   React.useEffect(() => {
     // 1. Synchronize patient medications to Express backend so the hourly background check has them
-    fetch('/api/patients/sync', {
+    fetch(`${window.location.origin}/api/patients/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
