@@ -1228,46 +1228,8 @@ export default function PatientDashboard({
                         </button>
                       </div>
 
-                      {/* Explanatory subtitle */}
-                      <div className="text-[11px] text-slate-500 leading-relaxed bg-slate-50/50 p-3.5 rounded-xl border border-slate-100">
-                        {activeStudyTab === 'patient' ? (
-                          <p>
-                            <strong>Vídeos Essenciais de Autocuidado:</strong> Exercícios, deparação técnica, explicações de sintomas e rotinas diárias guiadas para potencializar sua evolução individual. Clique no botão abaixo para assisti-los no YouTube.
-                          </p>
-                        ) : (
-                          <p>
-                            <strong>Educação para Familiares, Cuidadores e Parceiros:</strong> Guias de segurança, ergonomia de transferências em casa, primeiros socorros de crises e modulação comportamental segura. Clique no botão abaixo para assisti-los no YouTube.
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Video list render (TEXT-ONLY, NO THUMBNAILS/MINIATURES, NO DESCRIPTIONS) */}
-                      <div className="bg-white rounded-xl border border-slate-150 divide-y divide-slate-100">
-                        {currentVideos.length === 0 ? (
-                          <div className="p-6 text-center text-xs text-slate-400 italic">
-                            Nenhum vídeo específico cadastrado para esta modalidade.
-                          </div>
-                        ) : (
-                          currentVideos.map((video) => (
-                            <div key={video.id} className="p-3 hover:bg-slate-50/45 transition duration-150 flex items-start gap-3">
-                              <span className="flex-shrink-0 h-2 w-2 rounded-full bg-rose-500 mt-1.5 animate-pulse" />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-baseline justify-between gap-2">
-                                  <h4 className="text-xs font-extrabold text-slate-800 truncate">
-                                    {video.title}
-                                  </h4>
-                                  <span className="text-[9px] font-medium font-mono text-slate-400 bg-slate-100 border border-slate-150 px-1.5 py-0.2 rounded shrink-0">
-                                    {video.duration}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-
                       {/* APENAS UM BOTÃO PARA CADA SESSÃO NO CANAL DO YOUTUBE */}
-                      <div className="pt-1">
+                      <div className="pt-2">
                         <a
                           href="https://www.youtube.com/@InstitutoDiegoDorim"
                           target="_blank"
