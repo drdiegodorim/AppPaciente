@@ -60,6 +60,18 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
           max: 10
         },
         {
+          id: 'painLocation',
+          label: 'Localização da dor (marque todas que se aplicam)',
+          type: 'multiselect',
+          options: ['Unilateral (um lado só)', 'Frontal (testa)', 'Posterior (nuca)', 'Topo (topo da cabeça)', 'Cabeça toda']
+        },
+        {
+          id: 'painCharacteristics',
+          label: 'Características da dor',
+          type: 'multiselect',
+          options: ['Pulsátil/Latejante', 'Fincada', 'Aperto']
+        },
+        {
           id: 'painRelief',
           label: 'Alívio da dor: Melhora com repouso?',
           type: 'boolean'
@@ -86,10 +98,11 @@ export const CLINICAL_CARE_PLANS: Record<string, CarePlanContent> = {
           label: 'Sintomas associados',
           type: 'multiselect',
           options: [
-            'Sensibilidade a luz',
-            'Sensibilidade ao barulho',
-            'Tontura',
-            'Náusea/Vômito'
+            'Sensibilidade à luz (Fotofobia)',
+            'Sensibilidade ao barulho (Fonofobia)',
+            'Sensibilidade a cheiros (Osmofobia)',
+            'Náusea ou Vômito',
+            'Tontura'
           ]
         },
         {

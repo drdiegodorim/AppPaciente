@@ -436,6 +436,266 @@ Ficamos no aguardo de sua confirmação. Abraços.`;
               </div>
             </div>
 
+            {/* PAINEL DE MONITORAMENTO ESTATÍSTICO DE ENXAGUECA (ICHD-3) */}
+            {selectedPatient.diagnostic === 'Enxaqueca' && (() => {
+              const now = new Date();
+              const thirtyDaysAgo = new Date();
+              thirtyDaysAgo.setDate(now.getDate() - 30);
+              
+              // Filtrar logs dos últimos 30 dias para enxaqueca
+              const migraineLogs30Days = selectedPatientLogs.filter(log => {
+                return new Date(log.timestamp) >= thirtyDaysAgo;
+              });
+
+              // Agrupar logs por data (string simplificada YYYY-MM-DD para evitar fuso horário de horas)
+              const logsByDay: Record<string, typeof selectedPatientLogs> = {};
+              migraineLogs30Days.forEach(log => {
+                const dateObj = new Date(log.timestamp);
+                const dateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+                if (!logsByDay[dateStr]) {
+                  logsByDay[dateStr] = [];
+                }
+                logsByDay[dateStr].push(log);
+              });
+
+              const totalLoggedDays = Object.keys(logsByDay).length;
+              let totalDaysWithPain = 0;
+              let totalDaysWithAnalgesic = 0;
+              let sumPainIntensity = 0;
+              let countIntensityLogs = 0;
+              let totalICHDHeadacheCrises = 0;
+
+              // Detalhes das crises para mostrar de forma transparente para o médico
+              const crisesDetail: Array<{ date: string; reason: string }> = [];
+
+              Object.keys(logsByDay).forEach(dayStr => {
+                const dayLogs = logsByDay[dayStr];
+                
+                // 1. Dor presente?
+                const hasPain = dayLogs.some(log => {
+                  const scale = Number(log.data.painScale) !== undefined ? Number(log.data.painScale) : 0;
+                  const period = String(log.data.painPeriod || '');
+                  return period !== 'Sem dor' && scale > 0;
+                });
+                if (hasPain) totalDaysWithPain++;
+
+                // 2. Uso de analgésico de resgate?
+                const usedAnalgesic = dayLogs.some(log => {
+                  return log.data.medicationUsed === true || log.data.medicationUsed === 'true';
+                });
+                if (usedAnalgesic) totalDaysWithAnalgesic++;
+
+                // 3. Intensidade média (Pegar a intensidade máxima reportada no dia e somar para fazer a média)
+                const maxIntensityOnDay = dayLogs.reduce((max, log) => {
+                  const s = Number(log.data.painScale) || 0;
+                  return s > max ? s : max;
+                }, 0);
+                
+                sumPainIntensity += maxIntensityOnDay;
+                if (dayLogs.length > 0) countIntensityLogs++;
+
+                // 4. Critérios ICHD-3 de Crise de Enxaqueca
+                // Pelo menos 2 dos seguintes: unilateral, pulsatil, intensidade > 7, melhora com repouso
+                const isUnilateral = dayLogs.some(log => {
+                  const loc = log.data.painLocation;
+                  if (Array.isArray(loc)) {
+                    return loc.some(l => String(l).toLowerCase().includes('unilateral'));
+                  }
+                  return String(loc || '').toLowerCase().includes('unilateral');
+                });
+
+                const isPulsatile = dayLogs.some(log => {
+                  const charac = log.data.painCharacteristics;
+                  if (Array.isArray(charac)) {
+                    return charac.some(c => String(c).toLowerCase().includes('pulsát') || String(c).toLowerCase().includes('pulsat') || String(c).toLowerCase().includes('latejan'));
+                  }
+                  return String(charac || '').toLowerCase().includes('pulsát') || String(charac || '').toLowerCase().includes('pulsat') || String(charac || '').toLowerCase().includes('latejan');
+                });
+
+                const painScaleValue = maxIntensityOnDay;
+                const painGreaterThanSeven = painScaleValue > 7;
+
+                const improvesWithRest = dayLogs.some(log => {
+                  return log.data.painRelief === true || log.data.painRelief === 'true';
+                });
+
+                let criteriaCount = 0;
+                const criteriaMetList: string[] = [];
+                if (isUnilateral) { criteriaCount++; criteriaMetList.push('Unilateral'); }
+                if (isPulsatile) { criteriaCount++; criteriaMetList.push('Pulsátil'); }
+                if (painGreaterThanSeven) { criteriaCount++; criteriaMetList.push('Dor > 7'); }
+                if (improvesWithRest) { criteriaCount++; criteriaMetList.push('Melhora com repouso'); }
+
+                // Presença de náusea ou vomito
+                const hasNauseaOrVomiting = dayLogs.some(log => {
+                  const symptoms = log.data.associatedSymptoms;
+                  if (Array.isArray(symptoms)) {
+                    return symptoms.some(s => {
+                      const low = String(s).toLowerCase();
+                      return low.includes('nausea') || low.includes('náusea') || low.includes('vomit') || low.includes('vômit');
+                    });
+                  }
+                  const low = String(symptoms || '').toLowerCase();
+                  return low.includes('nausea') || low.includes('náusea') || low.includes('vomit') || low.includes('vômit');
+                });
+
+                // Presença de fonofobia, fotofobia ou osmofobia
+                const hasSensesSensitivity = dayLogs.some(log => {
+                  const symptoms = log.data.associatedSymptoms;
+                  if (Array.isArray(symptoms)) {
+                    return symptoms.some(s => {
+                      const low = String(s).toLowerCase();
+                      return low.includes('foto') || low.includes('luz') || low.includes('fono') || low.includes('barulho') || low.includes('osmo') || low.includes('cheiro');
+                    });
+                  }
+                  const low = String(symptoms || '').toLowerCase();
+                  return low.includes('foto') || low.includes('luz') || low.includes('fono') || low.includes('barulho') || low.includes('osmo') || low.includes('cheiro');
+                });
+
+                // Atende ao ICHD-3?
+                const isCrisisICHD = criteriaCount >= 2 && hasNauseaOrVomiting && hasSensesSensitivity;
+                if (isCrisisICHD) {
+                  totalICHDHeadacheCrises++;
+                  const [y, m, d] = dayStr.split('-');
+                  crisesDetail.push({
+                    date: `${d}/${m}/${y}`,
+                    reason: `Características: [${criteriaMetList.join(', ')}] + Náusea ou Vômito + Foto/Fono/Osmofobia`
+                  });
+                }
+              });
+
+              const valAvgIntensity = countIntensityLogs > 0 ? (sumPainIntensity / countIntensityLogs).toFixed(1) : '0';
+
+              return (
+                <div className="rounded-2xl border border-teal-100 bg-teal-50/10 p-5 shadow-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-teal-100/40 pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                        <Activity className="h-4 w-4 text-teal-600" />
+                        Acompanhamento Clínico de Enxaqueca (Últimos 30 dias - ICHD-3)
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Relatório epidemiológico e de ocorrência de crises projetadas sobre as respostas diárias consolidadas.
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-teal-100 text-teal-800 px-2.5 py-0.5 rounded-full border border-teal-200">
+                      Critérios ICHD-3
+                    </span>
+                  </div>
+
+                  {migraineLogs30Days.length === 0 ? (
+                    <div className="py-8 text-center text-slate-400 bg-white border border-slate-200/60 rounded-xl">
+                      <AlertCircle className="h-7 w-7 text-slate-300 mx-auto mb-1 animate-pulse" />
+                      <p className="text-xs font-semibold">Nenhum registro de Enxaqueca nos últimos 30 dias</p>
+                      <p className="text-[10px] text-slate-400 max-w-[340px] mx-auto mt-0.5">
+                        Assim que o paciente registrar os sintomas diários no painel dele, as pontuações e médias ICHD do médico serão calculadas em tempo real.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Card 1: Dias de Dor */}
+                        <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Dias com Dor</span>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xl font-black text-rose-600">{totalDaysWithPain}</span>
+                              <span className="text-xs font-semibold text-slate-400">/ 30 dias</span>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                            Média de dias de dor nos últimos 30 dias (Intensidade &gt; 0).
+                          </p>
+                        </div>
+
+                        {/* Card 2: Uso de Analgésicos */}
+                        <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Uso de Analgésicos</span>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xl font-black text-amber-600">{totalDaysWithAnalgesic}</span>
+                              <span className="text-xs font-semibold text-slate-400">/ 30 dias</span>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                            Módulo de recorrência média em dias do uso de analgésicos de resgate.
+                          </p>
+                        </div>
+
+                        {/* Card 3: Intensidade Média */}
+                        <div className="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Intensidade Média</span>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xl font-black text-teal-600">{valAvgIntensity}</span>
+                              <span className="text-xs font-semibold text-slate-400">/ 10</span>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                            Nível de intensidade média da cefaleia em 30 dias.
+                          </p>
+                        </div>
+
+                        {/* Card 4: Crises ICHD */}
+                        <div className="bg-white border border-rose-100 bg-rose-50/5 rounded-xl p-3.5 flex flex-col justify-between shadow-xs">
+                          <div>
+                            <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider block mb-1 flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3 text-rose-500 animate-pulse" />
+                              Crises (ICHD-3)
+                            </span>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xl font-black text-rose-700">{totalICHDHeadacheCrises}</span>
+                              <span className="text-xs font-semibold text-rose-400">/ 30 dias</span>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                            Média de crises diagnosticáveis sob as regras rígidas do ICHD-3.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Quadro Explicativo */}
+                      <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Metodologia Clinicamente Aplicada (ICHD-3 Internacional):
+                        </span>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-[11px] text-slate-600">
+                          <div className="bg-slate-50/60 p-2 rounded-lg border border-slate-100">
+                            <strong className="text-teal-700 font-bold block mb-0.5">A. Dor (Mínimo 2):</strong>
+                            <p className="text-[10px] leading-relaxed text-slate-500">Unilateral, pulsátil/latejante, dor grave (&gt;7) ou alívio comprovado com repouso físico.</p>
+                          </div>
+                          <div className="bg-slate-50/60 p-2 rounded-lg border border-slate-100">
+                            <strong className="text-teal-700 font-bold block mb-0.5">B. Somas Clínicas:</strong>
+                            <p className="text-[10px] leading-relaxed text-slate-500">Presença explícita de náusea ou de vômito marcada pelo paciente durante o mesmo dia.</p>
+                          </div>
+                          <div className="bg-slate-50/60 p-2 rounded-lg border border-slate-100">
+                            <strong className="text-teal-700 font-bold block mb-0.5">C. Hipersensibilidade:</strong>
+                            <p className="text-[10px] leading-relaxed text-slate-500">Hipersensibilidade marcada como fotofobia (luz), fonofobia (ruído) ou osmofobia (cheiro).</p>
+                          </div>
+                        </div>
+
+                        {crisesDetail.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-slate-100">
+                            <span className="text-[10px] font-semibold text-rose-700 uppercase tracking-widest block mb-1">
+                              Crises de Enxaqueca Históricas Validadas:
+                            </span>
+                            <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
+                              {crisesDetail.map((c, idx) => (
+                                <div key={idx} className="flex justify-between items-center text-[10px] bg-rose-50/20 border border-rose-100 px-2 py-1 rounded">
+                                  <strong className="text-rose-800 font-mono">{c.date}</strong>
+                                  <span className="text-slate-500 text-[9px] truncate max-w-xs sm:max-w-md" title={c.reason}>{c.reason}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* Grid details and chart */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Care Guidelines Details */}
