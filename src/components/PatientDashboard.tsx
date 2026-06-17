@@ -17,7 +17,8 @@ import {
   ExternalLink,
   Bell,
   Youtube,
-  RefreshCw
+  RefreshCw,
+  ArrowLeft
 } from 'lucide-react';
 import { Patient, TrackingEntry, DiagnosticType, MedicationPrescription, MedicationConfirmation } from '../types';
 import { CLINICAL_CARE_PLANS } from '../data/carePlans';
@@ -107,6 +108,8 @@ export default function PatientDashboard({
   const [testNotificationLoading, setTestNotificationLoading] = useState(false);
   const [testNotificationSent, setTestNotificationSent] = useState(false);
   const [showPushModal, setShowPushModal] = useState(false);
+  const [activeStudyTab, setActiveStudyTab] = useState<'patient' | 'companion'>('patient');
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'diary'>('dashboard');
 
   // Auto-show push permission prompt popup if permission is default and not dismissed in session
   React.useEffect(() => {
@@ -406,7 +409,8 @@ export default function PatientDashboard({
     setNotes('');
     setTimeout(() => {
       setSuccessMsg(false);
-    }, 4000);
+      setActiveSection('dashboard');
+    }, 3000);
   };
 
   const handleFieldChange = (fieldId: string, value: any) => {
@@ -789,495 +793,526 @@ export default function PatientDashboard({
           )}
         </div>
 
+        {/* BOTÃO/CARD DE ENTRADA DO DIÁRIO DE EVOLUÇÃO */}
+        {fields.length > 0 && activeSection === 'dashboard' && (
+          <div className="mb-8 rounded-2xl border border-emerald-100 bg-gradient-to-r from-teal-50/70 to-emerald-50/50 p-5 md:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-sm md:text-base">
+                <PlusCircle className="h-5 w-5 text-teal-600 shrink-0" />
+                Meu Diário de Evolução
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed max-w-2xl">
+                Registre seus sintomas hoje para compartilhar com o Dr. Diego Dorim e acompanhar sua evolução em tempo real.
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveSection('diary')}
+              className="rounded-xl bg-teal-650 hover:bg-teal-700 bg-teal-600 font-bold text-xs text-white px-5 py-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            >
+              <PlusCircle className="h-4.5 w-4.5 fill-white/10" />
+              Preencher Diário de Hoje
+            </button>
+          </div>
+        )}
+
         {/* Dashboard Unified Grid */}
-        <div className={isMigraine ? "grid grid-cols-1 lg:grid-cols-12 gap-8" : "max-w-3xl mx-auto"}>
-
-          {/* Column 1: Daily Evolution Form (lg:col-span-6) */}
-          {isMigraine && (
-            <div className="lg:col-span-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2 border-b border-slate-100 pb-3">
-              <PlusCircle className="h-5 w-5 text-teal-600" />
-              Meu Diário de Evolução
-            </h3>
-
-            <form onSubmit={handleLogSubmit} className="space-y-6">
-              {fields.map((f) => {
-                return (
-                  <div key={f.id} className="space-y-2">
-                    <label className="block text-xs font-semibold text-slate-700">
-                      {f.label}
-                    </label>
-
-                    {f.type === 'scale' && (
-                      <div className="space-y-2">
-                        <input
-                          type="range"
-                          min={f.min !== undefined ? f.min : 0}
-                          max={f.max !== undefined ? f.max : 10}
-                          value={formData[f.id]}
-                          onChange={(e) => handleFieldChange(f.id, parseInt(e.target.value))}
-                          className="w-full accent-teal-600 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                        />
-                        <div className="flex justify-between text-[11px] font-bold text-slate-600 px-1 font-mono">
-                          <span>Mín ({f.min})</span>
-                          <span className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded text-xs">
-                            Sua resposta: {formData[f.id]}
-                          </span>
-                          <span>Máx ({f.max})</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {f.type === 'boolean' && (
-                      <div className="flex items-center gap-4 py-1">
-                        <button
-                          type="button"
-                          onClick={() => handleFieldChange(f.id, true)}
-                          className={`flex-1 flex justify-center py-2 rounded-lg border text-xs font-semibold transition ${
-                            formData[f.id] === true
-                              ? 'bg-teal-50 border-teal-500 text-teal-700 shadow-sm'
-                              : 'bg-white border-slate-200 text-slate-500'
-                          }`}
-                        >
-                          Sim
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleFieldChange(f.id, false)}
-                          className={`flex-1 flex justify-center py-2 rounded-lg border text-xs font-semibold transition ${
-                            formData[f.id] === false
-                              ? 'bg-teal-50 border-teal-500 text-teal-700 shadow-sm'
-                              : 'bg-white border-slate-200 text-slate-500'
-                          }`}
-                        >
-                          Não
-                        </button>
-                      </div>
-                    )}
-
-                    {f.type === 'select' && (
-                      <select
-                        value={formData[f.id]}
-                        onChange={(e) => handleFieldChange(f.id, e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
-                      >
-                        {f.options?.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-
-                    {f.type === 'multiselect' && (
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {f.options?.map((opt) => {
-                          const currentVal = Array.isArray(formData[f.id]) ? formData[f.id] : [];
-                          const isSelected = currentVal.includes(opt);
-                          return (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => {
-                                const updatedList = isSelected
-                                  ? currentVal.filter((item: string) => item !== opt)
-                                  : [...currentVal, opt];
-                                handleFieldChange(f.id, updatedList);
-                              }}
-                              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition duration-150 ${
-                                isSelected
-                                  ? 'bg-teal-50 border-teal-500 text-teal-700 shadow-sm'
-                                  : 'bg-white border-slate-200 text-slate-500 hover:border-slate-350 hover:bg-slate-50'
-                              }`}
-                            >
-                              {opt}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {f.type === 'number' && (
-                      <input
-                        type="number"
-                        value={formData[f.id]}
-                        onChange={(e) => handleFieldChange(f.id, parseInt(e.target.value) || 0)}
-                        placeholder={f.placeholder}
-                        className="w-full rounded-xl border border-slate-200 px-3 py-3 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
-                      />
-                    )}
-
-                    {f.type === 'text' && (
-                      <input
-                        type="text"
-                        value={formData[f.id]}
-                        onChange={(e) => handleFieldChange(f.id, e.target.value)}
-                        placeholder={f.placeholder}
-                        className="w-full rounded-xl border border-slate-200 px-3 py-3 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-
-              <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-700">
-                  Notas ou Dúvidas Extras para seu Doutor (Opcional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Escreva algo relevante ou relate se notou algo fora do comum..."
-                  className="w-full rounded-xl border border-slate-200 px-3 py-3 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
-                />
+        {activeSection === 'diary' ? (
+          <div className="max-w-2xl mx-auto animate-fade-in">
+            {/* HERE RENDER THE DIARY FORM VIEW */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="space-y-0.5">
+                  <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-sm md:text-base">
+                    <PlusCircle className="h-5 w-5 text-teal-600" />
+                    Meu Diário de Evolução
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Preencha os dados abaixo sobre seu estado de hoje ({new Date().toLocaleDateString('pt-BR')})
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSuccessMsg(false);
+                    setActiveSection('dashboard');
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold px-3 py-1.5 transition flex items-center gap-1 cursor-pointer"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Voltar ao Portal
+                </button>
               </div>
 
-              {successMsg && (
-                <div className="rounded-xl bg-teal-50 p-4 border border-teal-100 flex items-start gap-2.5 animate-fade-in">
-                  <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-bold text-teal-800">Diário Enviado com sucesso!</h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      O Dr. Diego Dorim poderá avaliar este histórico na ficha do seu acompanhamento clínico.
+              {successMsg ? (
+                <div className="text-center py-10 px-4 space-y-4">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <CheckCircle className="h-8 w-8 stroke-[2.5]" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-extrabold text-slate-800">✓ Registro Enviado com Sucesso!</h3>
+                    <p className="text-[11px] text-slate-500 max-w-sm mx-auto leading-relaxed">
+                      Seu diário foi salvo. O Dr. Diego Dorim poderá avaliar este histórico na ficha do seu acompanhamento clínico.
                     </p>
                   </div>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full flex justify-center items-center gap-2 rounded-xl bg-teal-600 py-3 px-4 text-xs font-semibold text-white hover:bg-teal-700 transition"
-              >
-                <Send className="h-4 w-4" />
-                {carePlan?.trackerConfig.buttonLabel}
-              </button>
-            </form>
-          </div>
-          )}
-
-          {/* Column 2: Study Material & Guidelines (lg:col-span-6) */}
-          <div className={`${isMigraine ? 'lg:col-span-6' : 'w-full'} space-y-6`}>
-
-            {/* Atendimento & Envio de Exames */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
-              <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2 text-sm">
-                <Heart className="h-4.5 w-4.5 text-teal-600" />
-                💬 Secretaria & Envio de Exames
-              </h3>
-
-              {/* Botão de WhatsApp */}
-              <div className="space-y-2">
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Precisa falar com nossa recepcionista ou reagendar sua consulta? Entre em contato diretamente pelo WhatsApp:
-                </p>
-                <a
-                  href="https://wa.me/5511999999999?text=Olá,%20falo%20do%20Portal%20do%20Paciente%20do%20Instituto%20Diego%20Dorim."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold py-3 px-4 transition-all duration-200 shadow-md shadow-emerald-600/10 cursor-pointer"
-                >
-                  <svg className="h-4.5 w-4.5 fill-current shrink-0" viewBox="0 0 24 24">
-                    <path d="M12.004 0C5.372 0 0 5.373 0 12.011a11.91 11.91 0 0 0 1.621 5.952l-1.724 6.29 6.438-1.688a11.91 11.91 0 0 0 5.673 1.442h.005c6.627 0 12-5.377 12-12.015C24 5.373 18.628 0 12.004 0zm6.914 17.151c-.269.756-1.571 1.487-2.164 1.579-.593.093-1.187.143-3.411-.782-2.839-1.182-4.664-4.08-4.806-4.269-.142-.189-1.221-1.627-1.221-3.111 0-1.485.762-2.214 1.033-2.518.271-.303.593-.38.791-.38.198 0 .396.006.569.014.18.008.421-.069.658.504.240.58.818 1.996.889 2.14.072.143.12.311.025.503-.095.19-.142.304-.284.471-.142.168-.299.376-.427.505-.143.143-.293.299-.126.586.167.287.744 1.233 1.597 1.991.898.797 1.657 1.042 1.892 1.157.235.115.372.097.51-.06.136-.157.593-.69.751-.925.158-.235.316-.197.534-.117.218.081 1.385.655 1.623.774.238.118.396.177.456.28.06.103.06.593-.209 1.349z"/>
-                  </svg>
-                  Falar com o Consultório no WhatsApp
-                </a>
-              </div>
-
-              <hr className="border-slate-100" />
-
-              {/* Seção Interactiva de Envio de Exames */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded bg-teal-50 text-teal-600 shrink-0">
-                    <FileText className="h-3.5 w-3.5" />
-                  </span>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-800">Enviar Resultados de Exames</h4>
-                    <p className="text-[10px] text-slate-400">Envie laudos de ressonância ou exames de laboratório</p>
+                  <div className="pt-2 flex flex-col items-center gap-3">
+                    <span className="text-[10px] font-bold text-slate-400 font-mono tracking-wide uppercase px-2 py-1 bg-slate-50 rounded border border-slate-100 animate-pulse">
+                      Retornando ao Painel Principal em 3 segundos...
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSuccessMsg(false);
+                        setActiveSection('dashboard');
+                      }}
+                      className="rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold px-4 py-2 transition active:scale-[0.98] cursor-pointer"
+                    >
+                      Voltar Agora
+                    </button>
                   </div>
                 </div>
+              ) : (
+                <form onSubmit={handleLogSubmit} className="space-y-6">
+                  {fields.map((f) => {
+                    return (
+                      <div key={f.id} className="space-y-2">
+                        <label className="block text-xs font-semibold text-slate-700">
+                          {f.label}
+                        </label>
 
-                {/* Drag and drop selection container */}
-                <div 
-                  onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
-                  onDragLeave={() => setIsDragActive(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragActive(false);
-                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                      handleExamSelected(e.dataTransfer.files[0]);
-                    }
-                  }}
-                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition ${
-                    isDragActive 
-                      ? 'border-teal-500 bg-teal-50/20' 
-                      : examSelected 
-                      ? 'border-emerald-300 bg-emerald-50/10'
-                      : 'border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-slate-50'
-                  }`}
-                  onClick={() => document.getElementById('exam-input')?.click()}
-                >
-                  <input 
-                    type="file" 
-                    id="exam-input" 
-                    className="hidden" 
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleExamSelected(e.target.files[0]);
+                        {f.type === 'scale' && (
+                          <div className="space-y-2">
+                            <input
+                              type="range"
+                              min={f.min !== undefined ? f.min : 0}
+                              max={f.max !== undefined ? f.max : 10}
+                              value={formData[f.id]}
+                              onChange={(e) => handleFieldChange(f.id, parseInt(e.target.value))}
+                              className="w-full accent-teal-600 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                            />
+                            <div className="flex justify-between text-[11px] font-bold text-slate-600 px-1 font-mono">
+                              <span>Mín ({f.min})</span>
+                              <span className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded text-xs">
+                                Sua resposta: {formData[f.id]}
+                              </span>
+                              <span>Máx ({f.max})</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {f.type === 'boolean' && (
+                          <div className="flex items-center gap-4 py-1">
+                            <button
+                              type="button"
+                              onClick={() => handleFieldChange(f.id, true)}
+                              className={`flex-1 flex justify-center py-2 rounded-lg border text-xs font-semibold transition ${
+                                formData[f.id] === true
+                                  ? 'bg-teal-50 border-teal-500 text-teal-700 shadow-sm'
+                                  : 'bg-white border-slate-200 text-slate-500'
+                              }`}
+                            >
+                              Sim
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleFieldChange(f.id, false)}
+                              className={`flex-1 flex justify-center py-2 rounded-lg border text-xs font-semibold transition ${
+                                formData[f.id] === false
+                                  ? 'bg-teal-50 border-teal-500 text-teal-700 shadow-sm'
+                                  : 'bg-white border-slate-200 text-slate-500'
+                              }`}
+                            >
+                              Não
+                            </button>
+                          </div>
+                        )}
+
+                        {f.type === 'select' && (
+                          <select
+                            value={formData[f.id]}
+                            onChange={(e) => handleFieldChange(f.id, e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
+                          >
+                            {f.options?.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {f.type === 'multiselect' && (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {f.options?.map((opt) => {
+                              const currentVal = Array.isArray(formData[f.id]) ? formData[f.id] : [];
+                              const isSelected = currentVal.includes(opt);
+                              return (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  onClick={() => {
+                                    const updatedList = isSelected
+                                      ? currentVal.filter((item: string) => item !== opt)
+                                      : [...currentVal, opt];
+                                    handleFieldChange(f.id, updatedList);
+                                  }}
+                                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition duration-150 ${
+                                    isSelected
+                                      ? 'bg-teal-50 border-teal-500 text-teal-700 shadow-sm'
+                                      : 'bg-white border-slate-200 text-slate-500 hover:border-slate-350 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  {opt}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {f.type === 'number' && (
+                          <input
+                            type="number"
+                            value={formData[f.id]}
+                            onChange={(e) => handleFieldChange(f.id, parseInt(e.target.value) || 0)}
+                            placeholder={f.placeholder}
+                            className="w-full rounded-xl border border-slate-200 px-3 py-3 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
+                          />
+                        )}
+
+                        {f.type === 'text' && (
+                          <input
+                            type="text"
+                            value={formData[f.id]}
+                            onChange={(e) => handleFieldChange(f.id, e.target.value)}
+                            placeholder={f.placeholder}
+                            className="w-full rounded-xl border border-slate-200 px-3 py-3 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Notas ou Dúvidas Extras para seu Doutor (Opcional)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Escreva algo relevante ou relate se notou algo fora do comum..."
+                      className="w-full rounded-xl border border-slate-200 px-3 py-3 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full flex justify-center items-center gap-2 rounded-xl bg-teal-650 hover:bg-teal-700 bg-teal-600 py-3 px-4 text-xs font-extrabold text-white transition active:scale-[0.99] cursor-pointer"
+                  >
+                    <Send className="h-4 w-4" />
+                    {carePlan?.trackerConfig.buttonLabel}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Column 1: Secretaria e Envio de Exames */}
+            <div className="space-y-6">
+              {/* Atendimento & Envio de Exames */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
+                <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2 text-sm">
+                  <Heart className="h-4.5 w-4.5 text-teal-600" />
+                  💬 Secretaria & Envio de Exames
+                </h3>
+
+                {/* Botão de WhatsApp */}
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Precisa falar com nossa recepcionista ou reagendar sua consulta? Entre em contato diretamente pelo WhatsApp:
+                  </p>
+                  <a
+                    href="https://wa.me/5511999999999?text=Olá,%20falo%20do%20Portal%20do%20Paciente%20do%20Instituto%20Diego%20Dorim."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold py-3 px-4 transition-all duration-200 shadow-md shadow-emerald-600/10 cursor-pointer"
+                  >
+                    <svg className="h-4.5 w-4.5 fill-current shrink-0" viewBox="0 0 24 24">
+                      <path d="M12.004 0C5.372 0 0 5.373 0 12.011a11.91 11.91 0 0 0 1.621 5.952l-1.724 6.29 6.438-1.688a11.91 11.91 0 0 0 5.673 1.442h.005c6.627 0 12-5.377 12-12.015C24 5.373 18.628 0 12.004 0zm6.914 17.151c-.269.756-1.571 1.487-2.164 1.579-.593.093-1.187.143-3.411-.782-2.839-1.182-4.664-4.08-4.806-4.269-.142-.189-1.221-1.627-1.221-3.111 0-1.485.762-2.214 1.033-2.518.271-.303.593-.38.791-.38.198 0 .396.006.569.014.18.008.421-.069.658.504.240.58.818 1.996.889 2.14.072.143.12.311.025.503-.095.19-.142.304-.284.471-.142.168-.299.376-.427.505-.143.143-.293.299-.126.586.167.287.744 1.233 1.597 1.991.898.797 1.657 1.042 1.892 1.157.235.115.372.097.51-.06.136-.157.593-.69.751-.925.158-.235.316-.197.534-.117.218.081 1.385.655 1.623.774.238.118.396.177.456.28.06.103.06.593-.209 1.349z"/>
+                    </svg>
+                    Falar com o Consultório no WhatsApp
+                  </a>
+                </div>
+
+                <hr className="border-slate-100" />
+
+                {/* Seção Interactiva de Envio de Exames */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded bg-teal-50 text-teal-600 shrink-0">
+                      <FileText className="h-3.5 w-3.5" />
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800">Enviar Resultados de Exames</h4>
+                      <p className="text-[10px] text-slate-400">Envie laudos de ressonância ou exames de laboratório</p>
+                    </div>
+                  </div>
+
+                  {/* Drag and drop selection container */}
+                  <div 
+                    onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
+                    onDragLeave={() => setIsDragActive(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragActive(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        handleExamSelected(e.dataTransfer.files[0]);
                       }
                     }}
-                  />
-                  {!examSelected ? (
-                    <div className="space-y-1.5">
-                      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                      </div>
-                      <p className="text-[11px] font-semibold text-slate-700">Arrastar exame aqui ou clique para selecionar</p>
-                      <p className="text-[9px] text-slate-400">PDF, PNG ou JPG de até 15MB</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 text-left">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-8 w-8 items-center justify-center rounded bg-emerald-100 text-emerald-700 shrink-0">
-                          <CheckCircle className="h-4.5 w-4.5" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-slate-800 truncate">{examSelected.name}</p>
-                          <p className="text-[9px] text-slate-400">{(examSelected.size / 1024 / 1024).toFixed(2)} MB</p>
+                    className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition ${
+                      isDragActive 
+                        ? 'border-teal-500 bg-teal-50/20' 
+                        : examSelected 
+                        ? 'border-emerald-300 bg-emerald-50/10'
+                        : 'border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-slate-50'
+                    }`}
+                    onClick={() => document.getElementById('exam-input')?.click()}
+                  >
+                    <input 
+                      type="file" 
+                      id="exam-input" 
+                      className="hidden" 
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleExamSelected(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    {!examSelected ? (
+                      <div className="space-y-1.5">
+                        <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
                         </div>
-                        <button 
-                          type="button" 
-                          onClick={(e) => { e.stopPropagation(); setExamSelected(null); }}
-                          className="text-xs text-rose-500 hover:text-rose-700 font-bold px-1 cursor-pointer"
-                        >
-                          Remover
-                        </button>
+                        <p className="text-[11px] font-semibold text-slate-700">Arrastar exame aqui ou clique para selecionar</p>
+                        <p className="text-[9px] text-slate-400">PDF, PNG ou JPG de até 15MB</p>
                       </div>
+                    ) : (
+                      <div className="space-y-2 text-left">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-8 w-8 items-center justify-center rounded bg-emerald-100 text-emerald-700 shrink-0">
+                            <CheckCircle className="h-4.5 w-4.5" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-800 truncate">{examSelected.name}</p>
+                            <p className="text-[9px] text-slate-400">{(examSelected.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                          <button 
+                            type="button" 
+                            onClick={(e) => { e.stopPropagation(); setExamSelected(null); }}
+                            className="text-xs text-rose-500 hover:text-rose-700 font-bold px-1 cursor-pointer"
+                          >
+                            Remover
+                          </button>
+                        </div>
 
-                      {/* Informative text field for exam observations */}
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase">Observações do Exame</label>
-                        <input
-                          type="text"
-                          className="w-full text-xs rounded-lg border border-slate-200 px-2 py-1.5 bg-white text-slate-800 placeholder-slate-400 cursor-text"
-                          onClick={(e) => e.stopPropagation()}
-                          value={examNotes}
-                          onChange={(e) => setExamNotes(e.target.value)}
-                          placeholder="Ex: Laudo RM Crânio 12/2025"
-                        />
+                        {/* Informative text field for exam observations */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase">Observações do Exame</label>
+                          <input
+                            type="text"
+                            className="w-full text-xs rounded-lg border border-slate-200 px-2 py-1.5 bg-white text-slate-800 placeholder-slate-400 cursor-text"
+                            onClick={(e) => e.stopPropagation()}
+                            value={examNotes}
+                            onChange={(e) => setExamNotes(e.target.value)}
+                            placeholder="Ex: Laudo RM Crânio 12/2025"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Status / Action Button */}
+                  {examSelected && (
+                    <div className="space-y-2">
+                      {uploadingProgress !== null ? (
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-[10px] font-bold text-slate-600 font-mono">
+                            <span>{uploadingProgress < 100 ? 'Transmitindo exame...' : 'Segurança verificada!'}</span>
+                            <span>{uploadingProgress}%</span>
+                          </div>
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className="bg-teal-600 h-1.5 rounded-full transition-all duration-150"
+                              style={{ width: `${uploadingProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleExamUpload}
+                          className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold py-2.5 px-4 cursor-pointer"
+                        >
+                          Enviar Exame Selecionado
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {examSuccess && (
+                    <div className="rounded-xl bg-emerald-50 p-3.5 border border-emerald-100 flex items-start gap-2 animate-fade-in animate-duration-150">
+                      <CheckCircle className="h-4.5 w-4.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-xs font-bold text-emerald-800">Uploader Seguro Integrado</h4>
+                        <p className="text-[10px] text-slate-600 leading-relaxed mt-0.5">
+                          Exame enviado e arquivado com sucesso no seu prontuário clínico. Dr. Diego Dorim foi notificado na sala interna.
+                        </p>
                       </div>
                     </div>
                   )}
                 </div>
-
-                {/* Upload Status / Action Button */}
-                {examSelected && (
-                  <div className="space-y-2">
-                    {uploadingProgress !== null ? (
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[10px] font-bold text-slate-600 font-mono">
-                          <span>{uploadingProgress < 100 ? 'Transmitindo exame...' : 'Segurança verificada!'}</span>
-                          <span>{uploadingProgress}%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                          <div 
-                            className="bg-teal-600 h-1.5 rounded-full transition-all duration-150"
-                            style={{ width: `${uploadingProgress}%` }}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleExamUpload}
-                        className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold py-2.5 px-4 cursor-pointer"
-                      >
-                        Enviar Exame Selecionado
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {examSuccess && (
-                  <div className="rounded-xl bg-emerald-50 p-3.5 border border-emerald-100 flex items-start gap-2 animate-fade-in animate-duration-150">
-                    <CheckCircle className="h-4.5 w-4.5 text-emerald-600 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-xs font-bold text-emerald-800">Uploader Seguro Integrado</h4>
-                      <p className="text-[10px] text-slate-600 leading-relaxed mt-0.5">
-                        Exame enviado e arquivado com sucesso no seu prontuário clínico. Dr. Diego Dorim foi notificado na sala interna.
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* YouTube Material */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                  <Youtube className="h-4.5 w-4.5 text-rose-600" />
-                  🎥 Material de Estudo do Instituto
-                </h3>
-                <a
-                  href="https://www.youtube.com/@InstitutoDiegoDorim"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-rose-600 hover:text-rose-700 font-bold text-[11px] transition"
-                >
-                  Canal Oficial no YouTube <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </div>
+            {/* Column 2: Videos & Guidelines */}
+            <div className="space-y-6">
+              {/* YouTube Material */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                    <Youtube className="h-4.5 w-4.5 text-rose-600 animate-pulse" />
+                    🎥 Vídeos Orientativos
+                  </h3>
+                  <span className="text-[10px] bg-rose-50 text-rose-700 font-extrabold px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-wider">
+                    Conteúdo Recomendado
+                  </span>
+                </div>
 
-              {/* Videos tabs state management */}
-              {(() => {
-                const [activeStudyTab, setActiveStudyTab] = useState<'patient' | 'companion'>('patient');
-                const allVideos = carePlan?.videos || [];
-                const patientVideos = allVideos.filter(v => v.audience === 'patient' || !v.audience);
-                const companionVideos = allVideos.filter(v => v.audience === 'companion');
+                {/* Videos tabs state management */}
+                {(() => {
+                  const allVideos = carePlan?.videos || [];
+                  const patientVideos = allVideos.filter(v => v.audience === 'patient' || !v.audience);
+                  const companionVideos = allVideos.filter(v => v.audience === 'companion');
+                  const currentVideos = activeStudyTab === 'patient' ? patientVideos : companionVideos;
 
-                return (
-                  <div className="space-y-4">
-                    {/* Tab Selectors */}
-                    <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-1 border border-slate-150">
-                      <button
-                        type="button"
-                        onClick={() => setActiveStudyTab('patient')}
-                        className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all duration-200 cursor-pointer ${
-                          activeStudyTab === 'patient'
-                            ? 'bg-white text-teal-800 shadow-sm border border-slate-100'
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        <User className="h-4 w-4" />
-                        Sessão do Paciente ({patientVideos.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveStudyTab('companion')}
-                        className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all duration-200 cursor-pointer ${
-                          activeStudyTab === 'companion'
-                            ? 'bg-white text-teal-800 shadow-sm border border-slate-100'
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        <Heart className="h-4 w-4" />
-                        Sessão do Acompanhante ({companionVideos.length})
-                      </button>
-                    </div>
+                  return (
+                    <div className="space-y-4">
+                      {/* Tab Selectors */}
+                      <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-1 border border-slate-150">
+                        <button
+                          type="button"
+                          onClick={() => setActiveStudyTab('patient')}
+                          className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all duration-200 cursor-pointer ${
+                            activeStudyTab === 'patient'
+                              ? 'bg-white text-teal-800 shadow-sm border border-slate-100'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          <User className="h-4 w-4 text-teal-600" />
+                          Sessão do Paciente ({patientVideos.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveStudyTab('companion')}
+                          className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all duration-200 cursor-pointer ${
+                            activeStudyTab === 'companion'
+                              ? 'bg-white text-teal-800 shadow-sm border border-slate-100'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          <Heart className="h-4 w-4 text-rose-500" />
+                          Sessão do Acompanhante ({companionVideos.length})
+                        </button>
+                      </div>
 
-                    {/* Explanatory subtitle */}
-                    <div className="text-[11px] text-slate-500 leading-relaxed bg-slate-50/50 p-3 rounded-xl border border-slate-100">
-                      {activeStudyTab === 'patient' ? (
-                        <p>
-                          <strong>Vídeos Essenciais de Autocuidado:</strong> Exercícios, deparação técnica, explicações de sintomas e rotinas diárias guiadas para potencializar sua evolução individual.
-                        </p>
-                      ) : (
-                        <p>
-                          <strong>Educação para Familiares, Cuidadores e Parceiros:</strong> Guias de segurança, ergonomia de transferências em casa, primeiros socorros de crises e modulação comportamental segura.
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Video list render */}
-                    <div className="space-y-3">
-                      {(activeStudyTab === 'patient' ? patientVideos : companionVideos).length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/30 p-6 text-center">
-                          <Video className="h-8 w-8 text-slate-350 mx-auto mb-2" />
-                          <p className="text-xs font-bold text-slate-700">Canal Geral de Exercícios</p>
-                          <p className="text-[11px] text-slate-400 mt-1 max-w-[280px] mx-auto">
-                            Consulte nosso canal geral do YouTube para tutoriais e vídeos complementares adicionais.
+                      {/* Explanatory subtitle */}
+                      <div className="text-[11px] text-slate-500 leading-relaxed bg-slate-50/50 p-3.5 rounded-xl border border-slate-100">
+                        {activeStudyTab === 'patient' ? (
+                          <p>
+                            <strong>Vídeos Essenciais de Autocuidado:</strong> Exercícios, deparação técnica, explicações de sintomas e rotinas diárias guiadas para potencializar sua evolução individual. Clique no botão abaixo para assisti-los no YouTube.
                           </p>
-                        </div>
-                      ) : (
-                        (activeStudyTab === 'patient' ? patientVideos : companionVideos).map((video) => (
-                          <div
-                            key={video.id}
-                            className="group flex flex-col md:flex-row gap-4.5 rounded-xl border border-slate-150 bg-white p-3.5 hover:border-teal-200 hover:shadow-xs transition-all duration-200"
-                          >
-                            {/* Video Thumbnail */}
-                            <div className="relative w-full md:w-36 h-24 rounded-lg overflow-hidden bg-slate-100 shrink-0 shadow-xs border border-slate-100">
-                              <img
-                                src={video.thumbnailUrl}
-                                referrerPolicy="no-referrer"
-                                alt={video.title}
-                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              />
-                              <div className="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/25 flex items-center justify-center transition-all">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-rose-600 shadow-md group-hover:scale-110 transition duration-200">
-                                  <Play className="h-3 w-3 fill-rose-600 stroke-none ml-0.5" />
+                        ) : (
+                          <p>
+                            <strong>Educação para Familiares, Cuidadores e Parceiros:</strong> Guias de segurança, ergonomia de transferências em casa, primeiros socorros de crises e modulação comportamental segura. Clique no botão abaixo para assisti-los no YouTube.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Video list render (TEXT-ONLY, NO THUMBNAILS/MINIATURES, NO DESCRIPTIONS) */}
+                      <div className="bg-white rounded-xl border border-slate-150 divide-y divide-slate-100">
+                        {currentVideos.length === 0 ? (
+                          <div className="p-6 text-center text-xs text-slate-400 italic">
+                            Nenhum vídeo específico cadastrado para esta modalidade.
+                          </div>
+                        ) : (
+                          currentVideos.map((video) => (
+                            <div key={video.id} className="p-3 hover:bg-slate-50/45 transition duration-150 flex items-start gap-3">
+                              <span className="flex-shrink-0 h-2 w-2 rounded-full bg-rose-500 mt-1.5 animate-pulse" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline justify-between gap-2">
+                                  <h4 className="text-xs font-extrabold text-slate-800 truncate">
+                                    {video.title}
+                                  </h4>
+                                  <span className="text-[9px] font-medium font-mono text-slate-400 bg-slate-100 border border-slate-150 px-1.5 py-0.2 rounded shrink-0">
+                                    {video.duration}
+                                  </span>
                                 </div>
                               </div>
-                              <span className="absolute bottom-1 right-1 bg-slate-900/80 px-1.5 py-0.5 rounded text-[8px] font-bold font-mono text-white">
-                                {video.duration}
-                              </span>
                             </div>
+                          ))
+                        )}
+                      </div>
 
-                            {/* Video details text */}
-                            <div className="flex flex-col justify-between flex-1 min-w-0 space-y-1.5">
-                              <div>
-                                <h4 className="text-[12px] font-extrabold text-slate-800 leading-snug group-hover:text-teal-700 transition">
-                                  {video.title}
-                                </h4>
-                                <p className="text-[11px] text-slate-500 leading-relaxed mt-1 line-clamp-2">
-                                  {video.description}
-                                </p>
-                              </div>
-
-                              <div className="flex items-center justify-between pt-1">
-                                <span className="inline-flex items-center gap-1 text-[10px] bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-sm">
-                                  {activeStudyTab === 'patient' ? '👤 Paciente' : '👥 Acompanhante / Familiar'}
-                                </span>
-                                <a
-                                  href={video.youtubeUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-teal-600 hover:text-teal-700 font-bold text-[10px] transition cursor-pointer"
-                                >
-                                  Assistir Vídeo <ExternalLink className="h-3 w-3" />
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
+                      {/* APENAS UM BOTÃO PARA CADA SESSÃO NO CANAL DO YOUTUBE */}
+                      <div className="pt-1">
+                        <a
+                          href="https://www.youtube.com/@InstitutoDiegoDorim"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white text-xs font-bold py-3 px-4 transition-all duration-200 shadow-md shadow-rose-100 cursor-pointer"
+                        >
+                          <Youtube className="h-4 w-4 fill-white stroke-none" />
+                          {activeStudyTab === 'patient'
+                            ? 'Acessar Vídeos da Sessão do Paciente no YouTube'
+                            : 'Acessar Vídeos da Sessão do Acompanhante no YouTube'
+                          }
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Medical Guidelines Card */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-              <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2 text-sm">
-                <FileText className="h-4.5 w-4.5 text-teal-600" />
-                📋 Orientações Úteis do Médico
-              </h3>
-
-              <div className="space-y-3">
-                {carePlan?.guidelines.map((guide, idx) => (
-                  <div key={idx} className="flex gap-3 text-xs text-slate-600 items-start leading-relaxed">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] shrink-0">
-                      {idx + 1}
-                    </span>
-                    <p>{guide}</p>
-                  </div>
-                ))}
+                  );
+                })()}
               </div>
 
-              <div className="rounded-xl bg-slate-50 p-3 border border-slate-150 text-[11px] text-slate-500 flex gap-2">
-                <span className="text-teal-600 font-bold shrink-0">ℹ</span>
-                <p>Estas orientações foram prescritas exclusivamente pelo nosso consultório para auxiliar na evolução do seu tratamento.</p>
+              {/* Medical Guidelines Card */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2 text-sm">
+                  <FileText className="h-4.5 w-4.5 text-teal-600" />
+                  📋 Orientações Úteis do Médico
+                </h3>
+
+                <div className="space-y-3">
+                  {carePlan?.guidelines.map((guide, idx) => (
+                    <div key={idx} className="flex gap-3 text-xs text-slate-600 items-start leading-relaxed">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] shrink-0">
+                        {idx + 1}
+                      </span>
+                      <p>{guide}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-xl bg-slate-50 p-3 border border-slate-150 text-[11px] text-slate-500 flex gap-2">
+                  <span className="text-teal-600 font-bold shrink-0">ℹ</span>
+                  <p>Estas orientações foram prescritas exclusivamente pelo nosso consultório para auxiliar na evolução do seu tratamento.</p>
+                </div>
               </div>
             </div>
-
           </div>
-
-        </div>
+        )}
       </div>
 
       {/* POP-UP OVERLAY DE ATIVAÇÃO DE ALERTAS NO CELULAR */}
