@@ -12,6 +12,7 @@ import {
 import LoginScreen from './components/LoginScreen';
 import DoctorDashboard from './components/DoctorDashboard';
 import PatientDashboard from './components/PatientDashboard';
+import SecretaryDashboard from './components/SecretaryDashboard';
 import {
   checkSupabaseSchema,
   SupabaseSchemaStatus,
@@ -194,12 +195,16 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         parsed['diego.dorim'] = '#Ddrd0408!';
+        if (!parsed['secretaria']) {
+          parsed['secretaria'] = 'abc123';
+        }
         localStorage.setItem('clinical_credentials', JSON.stringify(parsed));
         return parsed;
       }
       // Local fallback seeding
       const initialPasswords: Record<string, string> = {
         'diego.dorim': '#Ddrd0408!',
+        'secretaria': 'abc123',
         'ana.silva': 'abc123',
         'carlos.oliveira': 'abc123',
         'beatriz.costa': 'abc123',
@@ -208,7 +213,7 @@ export default function App() {
       localStorage.setItem('clinical_credentials', JSON.stringify(initialPasswords));
       return initialPasswords;
     } catch {
-      return { 'diego.dorim': '#Ddrd0408!' };
+      return { 'diego.dorim': '#Ddrd0408!', 'secretaria': 'abc123' };
     }
   });
   const [session, setSession] = useState<UserSession | null>(null);
@@ -240,8 +245,36 @@ export default function App() {
           // Only override local states if we got populated sets or successfully matched
           // Let's seed default values if the database tables are empty
           if (dbPats.length > 0) {
-            setPatients(dbPats);
-            localStorage.setItem('clinical_patients', JSON.stringify(dbPats));
+            const localPatsStr = localStorage.getItem('clinical_patients');
+            let mergedPats = [...dbPats];
+            if (localPatsStr) {
+              try {
+                const localPats: Patient[] = JSON.parse(localPatsStr);
+                mergedPats = dbPats.map((dbPat) => {
+                  const localPat = localPats.find((lp) => lp.id === dbPat.id);
+                  if (localPat && localPat.treatmentPlan) {
+                    const localAtts = localPat.treatmentPlan.attendances || [];
+                    const dbAtts = dbPat.treatmentPlan?.attendances || [];
+                    
+                    const hasMoreLocalAtts = localAtts.length > dbAtts.length;
+                    const hasLocalGoals = localPat.treatmentPlan.goals && 
+                      (!dbPat.treatmentPlan || !dbPat.treatmentPlan.goals);
+                    
+                    if (hasMoreLocalAtts || hasLocalGoals) {
+                      return {
+                        ...dbPat,
+                        treatmentPlan: localPat.treatmentPlan
+                      };
+                    }
+                  }
+                  return dbPat;
+                });
+              } catch (e) {
+                console.error("Erro ao mesclar pacientes locais:", e);
+              }
+            }
+            setPatients(mergedPats);
+            localStorage.setItem('clinical_patients', JSON.stringify(mergedPats));
           } else {
             // Seed Supabase with local default mock data
             for (const p of DIRECTORY_MOCK_PATIENTS) {
@@ -347,6 +380,20 @@ export default function App() {
     // Auto-detect role by searching both doctors and patients
     const foundDoctor = doctors.find((d) => d.username.toLowerCase() === targetUser);
     const foundPatient = patients.find((p) => p.username.toLowerCase() === targetUser);
+
+    if (targetUser === 'secretaria') {
+      const currentPass = credentials[targetUser] || 'abc123';
+      if (customPassword !== currentPass) {
+        return 'Senha incorreta para acesso da secretaria.';
+      }
+
+      setSession({
+        userId: 'secretaria',
+        username: 'secretaria',
+        role: 'secretary'
+      });
+      return null;
+    }
 
     if (foundDoctor) {
       let correctPass = credentials[targetUser];
@@ -540,6 +587,7 @@ export default function App() {
   const syncWithSupabase = async () => {
     try {
       const schema = await checkSupabaseSchema();
+      setSupabaseStatus(schema);
       if (schema.connected && !schema.tablesMissing) {
         const [dbDocs, dbPats, dbLogs, dbConfs, dbCreds] = await Promise.all([
           fetchDoctorsDB(),
@@ -550,8 +598,36 @@ export default function App() {
         ]);
         
         if (dbPats.length > 0) {
-          setPatients(dbPats);
-          localStorage.setItem('clinical_patients', JSON.stringify(dbPats));
+          const localPatsStr = localStorage.getItem('clinical_patients');
+          let mergedPats = [...dbPats];
+          if (localPatsStr) {
+            try {
+              const localPats: Patient[] = JSON.parse(localPatsStr);
+              mergedPats = dbPats.map((dbPat) => {
+                const localPat = localPats.find((lp) => lp.id === dbPat.id);
+                if (localPat && localPat.treatmentPlan) {
+                  const localAtts = localPat.treatmentPlan.attendances || [];
+                  const dbAtts = dbPat.treatmentPlan?.attendances || [];
+                  
+                  const hasMoreLocalAtts = localAtts.length > dbAtts.length;
+                  const hasLocalGoals = localPat.treatmentPlan.goals && 
+                    (!dbPat.treatmentPlan || !dbPat.treatmentPlan.goals);
+                  
+                  if (hasMoreLocalAtts || hasLocalGoals) {
+                    return {
+                      ...dbPat,
+                      treatmentPlan: localPat.treatmentPlan
+                    };
+                  }
+                }
+                return dbPat;
+              });
+            } catch (e) {
+              console.error("Erro ao mesclar pacientes locais durante sincronização manual:", e);
+            }
+          }
+          setPatients(mergedPats);
+          localStorage.setItem('clinical_patients', JSON.stringify(mergedPats));
         }
         if (dbDocs.length > 0) {
           setDoctors(dbDocs);
@@ -782,6 +858,13 @@ export default function App() {
           onUpdatePatient={handleUpdatePatient}
           onDeletePatient={handleDeletePatient}
           onLogout={handleLogout}
+          supabaseStatus={supabaseStatus}
+        />
+      ) : session.role === 'secretary' ? (
+        <SecretaryDashboard
+          patients={patients}
+          onLogout={handleLogout}
+          onSyncData={syncWithSupabase}
           supabaseStatus={supabaseStatus}
         />
       ) : (

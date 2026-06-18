@@ -70,6 +70,27 @@ function safeParseJSON(val: any, defaultVal: any = []): any {
 }
 
 export function mapPatientFromDB(row: any): Patient {
+  let medications = safeParseJSON(row.medications, []);
+  let treatmentPlan = safeParseJSON(row.treatment_plan || row.treatmentPlan, {});
+
+  // Extract from medication backup if it exists
+  const backupIndex = medications.findIndex((m: any) => m.id === '__treatment_plan_backup__');
+  if (backupIndex !== -1) {
+    try {
+      const backupPlan = JSON.parse(medications[backupIndex].dosage || '{}');
+      if (backupPlan && Object.keys(backupPlan).length > 0) {
+        // Use backup if native field is empty
+        if (!treatmentPlan || Object.keys(treatmentPlan).length === 0) {
+          treatmentPlan = backupPlan;
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing treatment plan backup:", e);
+    }
+    // Filter out the backup item from client-facing medications list
+    medications = medications.filter((m: any) => m.id !== '__treatment_plan_backup__');
+  }
+
   return {
     id: row.id,
     firstName: row.first_name || row.firstName || '',
@@ -78,8 +99,8 @@ export function mapPatientFromDB(row: any): Patient {
     diagnostic: row.diagnostic || 'Enxaqueca',
     requiresPasswordChange: row.requires_password_change !== undefined ? row.requires_password_change : (row.requiresPasswordChange || false),
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
-    medications: safeParseJSON(row.medications, []),
-    treatmentPlan: safeParseJSON(row.treatment_plan || row.treatmentPlan, {})
+    medications: medications,
+    treatmentPlan: treatmentPlan
   };
 }
 
@@ -175,7 +196,7 @@ export async function saveDoctorDB(doc: Doctor): Promise<void> {
 }
 
 export async function savePatientDB(pat: Patient): Promise<void> {
-  const { error } = await supabase.from('patients').upsert({
+  const payload: any = {
     id: pat.id,
     first_name: pat.firstName,
     last_name: pat.lastName,
@@ -185,8 +206,37 @@ export async function savePatientDB(pat: Patient): Promise<void> {
     created_at: pat.createdAt,
     medications: pat.medications || [],
     treatment_plan: pat.treatmentPlan || null
-  });
-  if (error) throw error;
+  };
+
+  // Embed treatment plan as a lightweight JSON string inside medications for robust fallback
+  if (pat.treatmentPlan && Object.keys(pat.treatmentPlan).length > 0) {
+    const backupItem = {
+      id: '__treatment_plan_backup__',
+      name: 'Plano de Acompanhamento (Backup)',
+      dosage: JSON.stringify(pat.treatmentPlan),
+      time: '00:00'
+    };
+    payload.medications = [...(pat.medications || []), backupItem];
+  }
+
+  // Try saving with the treatment_plan column
+  const { error } = await supabase.from('patients').upsert(payload);
+  
+  if (error) {
+    // If the error code is 42703 (undefined_column) because the column 'treatment_plan' does not exist,
+    // retry saving by OMITTING the treatment_plan column from payload.
+    // The scheduling of goals and attendance logs remains fully secured in the medications backup!
+    if (error.code === '42703') {
+      console.warn("Table patients has missing 'treatment_plan' column. Fallback to medications backup...");
+      const fallbackPayload = { ...payload };
+      delete fallbackPayload.treatment_plan;
+      
+      const { error: retryError } = await supabase.from('patients').upsert(fallbackPayload);
+      if (retryError) throw retryError;
+    } else {
+      throw error;
+    }
+  }
 }
 
 export async function saveCredentialDB(username: string, pass: string): Promise<void> {

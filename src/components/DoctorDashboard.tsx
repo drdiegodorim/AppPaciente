@@ -51,6 +51,13 @@ export default function DoctorDashboard({
   const [activeTab, setActiveTab] = useState<'overview' | 'register' | 'patients' | 'alerts'>('overview');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [ignoreSchemaWarning, setIgnoreSchemaWarning] = useState(() => {
+    try {
+      return localStorage.getItem('clinical_ignore_schema_warning') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // Phone numbers storage mapped by patientId (saved in localStorage on the doctor's browser)
   const [patientPhones, setPatientPhones] = useState<Record<string, string>>(() => {
@@ -462,34 +469,87 @@ Ficamos no aguardo de sua confirmação. Abraços.`;
 
       {/* Main Body */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {supabaseStatus?.missingTreatmentPlanColumn && (
+        {supabaseStatus?.missingTreatmentPlanColumn && !ignoreSchemaWarning && (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm space-y-3">
             <h3 className="font-bold text-amber-800 flex items-center gap-2 text-sm">
-              <AlertTriangle className="h-5 w-5 text-amber-605 animate-pulse" />
+              <AlertTriangle className="h-5 w-5 text-amber-606 animate-pulse" />
               Sincronização Requerida: Atualização no Banco de Dados (Supabase)
             </h3>
             <p className="text-xs text-amber-700 leading-relaxed">
-              Detectamos que seu banco de dados no Supabase não possui a coluna de plano de tratamento (<code className="font-mono bg-amber-100 px-1 rounded">treatment_plan</code>). Para conseguir salvar as metas e registrar o histórico de atendimentos e apresentar no painel do paciente, copie e execute o comando abaixo no <strong>editor SQL do seu painel do Supabase</strong> e recarregue a página:
+              Detectamos que seu banco de dados no Supabase ainda não reportou a coluna de plano de tratamento (<code className="font-mono bg-amber-100 px-1 rounded">treatment_plan</code>). Como você está utilizando uma instância customizada / Easypanel, o serviço de API (PostgREST) pode estar com o esquema antigo em cache.
             </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <code className="flex-1 bg-slate-900 text-[10px] sm:text-xs text-teal-400 p-3 rounded-lg font-mono overflow-x-auto select-all border border-slate-800 shadow-inner">
-                {"ALTER TABLE patients ADD COLUMN IF NOT EXISTS treatment_plan jsonb DEFAULT '{\"goals\":{\"consultas\":5},\"attendances\":[]}'::jsonb;"}
-              </code>
-              <button
-                type="button"
-                id="copy-alter-sql"
-                onClick={() => {
-                  navigator.clipboard.writeText(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS treatment_plan jsonb DEFAULT '{"goals":{"consultas":5},"attendances":[]}'::jsonb;`);
-                  const btn = document.getElementById('copy-alter-sql');
-                  if (btn) {
-                    btn.innerText = 'Copiado! ✓';
-                    setTimeout(() => { btn.innerText = 'Copiar SQL'; }, 3000);
-                  }
-                }}
-                className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 transition shrink-0 shadow cursor-pointer text-center"
-              >
-                Copiar SQL
-              </button>
+            
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-amber-805">Passo para limpar o cache de tabelas:</p>
+              <p className="text-xs text-amber-700 leading-relaxed">
+                Execute o comando abaixo no <strong>editor SQL do seu console</strong> para forçar a atualização imediata dos campos:
+              </p>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <code className="flex-1 bg-slate-900 text-[10px] sm:text-xs text-teal-400 p-3 rounded-lg font-mono overflow-x-auto select-all border border-slate-800 shadow-inner">
+                  {"NOTIFY pgrst, 'reload schema';"}
+                </code>
+                <button
+                  type="button"
+                  id="copy-reload-sql"
+                  onClick={() => {
+                    navigator.clipboard.writeText("NOTIFY pgrst, 'reload schema';");
+                    const btn = document.getElementById('copy-reload-sql');
+                    if (btn) {
+                      btn.innerText = 'Copiado! ✓';
+                      setTimeout(() => { btn.innerText = 'Copiar SQL'; }, 3000);
+                    }
+                  }}
+                  className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 transition shrink-0 shadow cursor-pointer text-center"
+                >
+                  Copiar comando
+                </button>
+              </div>
+            </div>
+
+            {supabaseStatus.errors && supabaseStatus.errors.length > 0 && (
+              <div className="bg-slate-950 text-slate-300 font-mono text-[10px] p-3 rounded-lg border border-slate-800 space-y-1">
+                <span className="text-rose-400 font-bold block">Erro retornado pela conexão:</span>
+                {supabaseStatus.errors.map((err, i) => (
+                  <div key={i}>• {err}</div>
+                ))}
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-amber-200/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <p className="text-[11px] text-amber-700 font-medium">
+                Se já executou ambos os SQLs e as atualizações já estão funcionando, você pode ignorar e ocultar este aviso definitivamente.
+              </p>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('clinical_ignore_schema_warning', 'true');
+                    } catch (e) {
+                      console.error(e);
+                    }
+                    setIgnoreSchemaWarning(true);
+                  }}
+                  className="rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold text-[11px] px-3.5 py-2 transition shadow cursor-pointer"
+                >
+                  Ignorar e Ocultar Aviso ✓
+                </button>
+                <button
+                  type="button"
+                  id="copy-alter-sql-alt"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS treatment_plan jsonb DEFAULT '{"goals":{"consultas":5},"attendances":[]}'::jsonb;`);
+                    const btn = document.getElementById('copy-alter-sql-alt');
+                    if (btn) {
+                      btn.innerText = 'Copiado! ✓';
+                      setTimeout(() => { btn.innerText = 'Copiar SQL de Coluna'; }, 3000);
+                    }
+                  }}
+                  className="rounded-lg bg-slate-800 hover:bg-slate-950 text-slate-200 font-bold text-[11px] px-3.5 py-2 transition inline-flex items-center gap-1 cursor-pointer border border-slate-700"
+                >
+                  Copiar SQL de Coluna
+                </button>
+              </div>
             </div>
           </div>
         )}

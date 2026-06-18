@@ -107,7 +107,7 @@ export interface Doctor {
 export interface UserSession {
   userId: string;
   username: string;
-  role: 'doctor' | 'patient';
+  role: 'doctor' | 'patient' | 'secretary';
   patientDetails?: Patient;
   doctorDetails?: Doctor;
 }
