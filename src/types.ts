@@ -66,6 +66,21 @@ export interface MedicationConfirmation {
   confirmedAt: string; // ISO string
 }
 
+export interface TreatmentAttendance {
+  id: string;
+  date: string;
+  type: 'consulta' | 'botox';
+  notes?: string;
+}
+
+export interface TreatmentPlan {
+  goals?: {
+    consultas?: number;
+    botox?: number;
+  };
+  attendances?: TreatmentAttendance[];
+}
+
 export interface Patient {
   id: string;
   firstName: string;
@@ -75,6 +90,7 @@ export interface Patient {
   requiresPasswordChange: boolean;
   createdAt: string;
   medications?: MedicationPrescription[];
+  treatmentPlan?: TreatmentPlan;
 }
 
 export interface Doctor {

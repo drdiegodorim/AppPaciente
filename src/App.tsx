@@ -6,7 +6,8 @@ import {
   DiagnosticType, 
   MedicationPrescription, 
   MedicationConfirmation,
-  Doctor
+  Doctor,
+  TreatmentPlan
 } from './types';
 import LoginScreen from './components/LoginScreen';
 import DoctorDashboard from './components/DoctorDashboard';
@@ -507,7 +508,7 @@ export default function App() {
     return newPatient;
   };
 
-  const handleUpdatePatient = (patientId: string, firstName: string, lastName: string, diagnostic: DiagnosticType): Patient => {
+  const handleUpdatePatient = (patientId: string, firstName: string, lastName: string, diagnostic: DiagnosticType, treatmentPlan?: TreatmentPlan): Patient => {
     const currentPatient = patients.find(p => p.id === patientId);
     if (!currentPatient) {
       throw new Error("Patient not found");
@@ -517,7 +518,8 @@ export default function App() {
       ...currentPatient,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      diagnostic
+      diagnostic,
+      treatmentPlan: treatmentPlan !== undefined ? treatmentPlan : currentPatient.treatmentPlan
     };
 
     const updatedPats = patients.map((p) => p.id === patientId ? updatedPatient : p);
@@ -780,6 +782,7 @@ export default function App() {
           onUpdatePatient={handleUpdatePatient}
           onDeletePatient={handleDeletePatient}
           onLogout={handleLogout}
+          supabaseStatus={supabaseStatus}
         />
       ) : (
         session.patientDetails && (
@@ -792,6 +795,7 @@ export default function App() {
             onAddLog={handleAddLog}
             onLogout={handleLogout}
             onSyncData={syncWithSupabase}
+            supabaseStatus={supabaseStatus}
           />
         )
       )}

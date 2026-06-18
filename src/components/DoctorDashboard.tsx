@@ -21,8 +21,9 @@ import {
   MessageSquare,
   Phone
 } from 'lucide-react';
-import { Patient, DiagnosticType, TrackingEntry, MedicationPrescription, MedicationConfirmation } from '../types';
+import { Patient, DiagnosticType, TrackingEntry, MedicationPrescription, MedicationConfirmation, TreatmentPlan, TreatmentAttendance } from '../types';
 import { CLINICAL_CARE_PLANS } from '../data/carePlans';
+import { SupabaseSchemaStatus } from '../lib/supabase';
 
 interface DoctorDashboardProps {
   patients: Patient[];
@@ -30,9 +31,10 @@ interface DoctorDashboardProps {
   medicationConfirmations: MedicationConfirmation[];
   onUpdatePatientMedications: (patientId: string, medications: MedicationPrescription[]) => Promise<void>;
   onAddPatient: (firstName: string, lastName: string, diagnostic: DiagnosticType) => Patient;
-  onUpdatePatient: (patientId: string, firstName: string, lastName: string, diagnostic: DiagnosticType) => void;
+  onUpdatePatient: (patientId: string, firstName: string, lastName: string, diagnostic: DiagnosticType, treatmentPlan?: TreatmentPlan) => void;
   onDeletePatient: (id: string) => void;
   onLogout: () => void;
+  supabaseStatus?: SupabaseSchemaStatus;
 }
 
 export default function DoctorDashboard({
@@ -43,7 +45,8 @@ export default function DoctorDashboard({
   onAddPatient,
   onUpdatePatient,
   onDeletePatient,
-  onLogout
+  onLogout,
+  supabaseStatus
 }: DoctorDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'register' | 'patients' | 'alerts'>('overview');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -113,16 +116,95 @@ export default function DoctorDashboard({
   const [syncStatusMessage, setSyncStatusMessage] = useState<string | null>(null);
   const [editingMedId, setEditingMedId] = useState<string | null>(null);
 
+  // Acompanhamento / Plano de Tratamento States
+  const [attendanceDate, setAttendanceDate] = useState<string>(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  });
+  const [attendanceType, setAttendanceType] = useState<'consulta' | 'botox'>('consulta');
+  const [attendanceNotes, setAttendanceNotes] = useState<string>('');
+  const [planMsg, setPlanMsg] = useState<string | null>(null);
+
   // Search states
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Reset editing medication state when selected patient changes
+  // Reset/sync state when selected patient changes
   useEffect(() => {
     setEditingMedId(null);
     setNewMedName('');
     setNewMedDosage('');
     setNewMedTime('08:00');
+
+    // Reset attendance form
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    setAttendanceDate(`${yyyy}-${mm}-${dd}`);
+    setAttendanceType('consulta');
+    setAttendanceNotes('');
+    setPlanMsg(null);
   }, [selectedPatientId]);
+
+  const handleRegisterAttendance = (e: React.FormEvent) => {
+    e.preventDefault();
+    const selPat = patients.find((p) => p.id === selectedPatientId);
+    if (!selectedPatientId || !selPat) return;
+
+    const newAttendance: TreatmentAttendance = {
+      id: "att_" + Math.random().toString(36).substring(2, 9),
+      date: attendanceDate,
+      type: attendanceType,
+      notes: attendanceNotes.trim()
+    };
+
+    const currentPlan = selPat.treatmentPlan || {};
+    const updatedAttendances = [...(currentPlan.attendances || []), newAttendance];
+    // Sort descendente por data
+    updatedAttendances.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const updatedPlan: TreatmentPlan = {
+      ...currentPlan,
+      attendances: updatedAttendances
+    };
+
+    onUpdatePatient(
+      selPat.id,
+      selPat.firstName,
+      selPat.lastName,
+      selPat.diagnostic,
+      updatedPlan
+    );
+
+    // Resetar campos
+    setAttendanceNotes('');
+    setPlanMsg("Presença registrada com sucesso!");
+    setTimeout(() => setPlanMsg(null), 3000);
+  };
+
+  const handleRemoveAttendance = (attendanceId: string) => {
+    const selPat = patients.find((p) => p.id === selectedPatientId);
+    if (!selectedPatientId || !selPat) return;
+
+    const currentPlan = selPat.treatmentPlan || {};
+    const updatedAttendances = (currentPlan.attendances || []).filter(a => a.id !== attendanceId);
+
+    const updatedPlan: TreatmentPlan = {
+      ...currentPlan,
+      attendances: updatedAttendances
+    };
+
+    onUpdatePatient(
+      selPat.id,
+      selPat.firstName,
+      selPat.lastName,
+      selPat.diagnostic,
+      updatedPlan
+    );
+  };
 
   // Alarms and alerts helper functions
   const parseTimeToMinutes = (timeStr: string) => {
@@ -380,6 +462,38 @@ Ficamos no aguardo de sua confirmação. Abraços.`;
 
       {/* Main Body */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {supabaseStatus?.missingTreatmentPlanColumn && (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm space-y-3">
+            <h3 className="font-bold text-amber-800 flex items-center gap-2 text-sm">
+              <AlertTriangle className="h-5 w-5 text-amber-605 animate-pulse" />
+              Sincronização Requerida: Atualização no Banco de Dados (Supabase)
+            </h3>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              Detectamos que seu banco de dados no Supabase não possui a coluna de plano de tratamento (<code className="font-mono bg-amber-100 px-1 rounded">treatment_plan</code>). Para conseguir salvar as metas e registrar o histórico de atendimentos e apresentar no painel do paciente, copie e execute o comando abaixo no <strong>editor SQL do seu painel do Supabase</strong> e recarregue a página:
+            </p>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <code className="flex-1 bg-slate-900 text-[10px] sm:text-xs text-teal-400 p-3 rounded-lg font-mono overflow-x-auto select-all border border-slate-800 shadow-inner">
+                {"ALTER TABLE patients ADD COLUMN IF NOT EXISTS treatment_plan jsonb DEFAULT '{\"goals\":{\"consultas\":5},\"attendances\":[]}'::jsonb;"}
+              </code>
+              <button
+                type="button"
+                id="copy-alter-sql"
+                onClick={() => {
+                  navigator.clipboard.writeText(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS treatment_plan jsonb DEFAULT '{"goals":{"consultas":5},"attendances":[]}'::jsonb;`);
+                  const btn = document.getElementById('copy-alter-sql');
+                  if (btn) {
+                    btn.innerText = 'Copiado! ✓';
+                    setTimeout(() => { btn.innerText = 'Copiar SQL'; }, 3000);
+                  }
+                }}
+                className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 transition shrink-0 shadow cursor-pointer text-center"
+              >
+                Copiar SQL
+              </button>
+            </div>
+          </div>
+        )}
+
         {selectedPatientId && selectedPatient ? (
           /* PATIENT MONITORING SHEET VIEW */
           <div className="space-y-6">
@@ -993,6 +1107,250 @@ Ficamos no aguardo de sua confirmação. Abraços.`;
               </div>
 
             </div>
+
+            {/* Acompanhamento do Plano de Tratamento e Atendimentos */}
+            {(() => {
+              const diagnosticLower = (selectedPatient.diagnostic || '').toLowerCase();
+              const hasBotoxOption = 
+                diagnosticLower.includes('espasticidade') ||
+                diagnosticLower.includes('distonia') ||
+                diagnosticLower.includes('enxaqueca') ||
+                diagnosticLower.includes('sialorreia');
+
+              const goalConsultas = selectedPatient.treatmentPlan?.goals?.consultas ?? 5;
+              const goalBotox = hasBotoxOption ? (selectedPatient.treatmentPlan?.goals?.botox ?? 3) : 0;
+
+              const realizedConsultas = (selectedPatient.treatmentPlan?.attendances || [])
+                .filter(a => a.type === 'consulta').length;
+              const realizedBotox = hasBotoxOption ? (selectedPatient.treatmentPlan?.attendances || [])
+                .filter(a => a.type === 'botox').length : 0;
+
+              const pctConsultas = goalConsultas > 0 ? Math.round((realizedConsultas / goalConsultas) * 100) : 0;
+              const pctBotox = goalBotox > 0 ? Math.round((realizedBotox / goalBotox) * 100) : 0;
+
+              return (
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <Calendar className="h-5 w-5 text-teal-600" />
+                    📋 Plano de Tratamento & Controle de Presença Presencial
+                  </h3>
+
+                  {/* 1. CONFIGURAÇÃO DE METAS (PROGRAMAR NÚMEROS) */}
+                  <div className="bg-slate-50 border border-slate-150 rounded-xl p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      ⚙️ Programação de Metas Personalizadas para o Paciente
+                    </h4>
+                    <p className="text-[11px] text-slate-500 leading-normal">
+                      Defina o número programado de cada procedimento para monitorar a frequência de atendimentos.
+                    </p>
+
+                    <div className="flex flex-wrap items-end gap-6 pt-1" key={selectedPatient.id}>
+                      <div className="space-y-1">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase">Consultas Programadas</label>
+                        <input
+                          type="number"
+                          min={0}
+                          defaultValue={goalConsultas}
+                          id="doc-goal-consultas"
+                          className="w-24 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                        />
+                      </div>
+
+                      {hasBotoxOption && (
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase">Aplicações Botox Programadas</label>
+                          <input
+                            type="number"
+                            min={0}
+                            defaultValue={goalBotox}
+                            id="doc-goal-botox"
+                            className="w-24 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                          />
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const consVal = parseInt((document.getElementById('doc-goal-consultas') as HTMLInputElement)?.value || '0');
+                          const botVal = hasBotoxOption 
+                            ? parseInt((document.getElementById('doc-goal-botox') as HTMLInputElement)?.value || '0')
+                            : undefined;
+
+                          const updatedPlan: TreatmentPlan = {
+                            ...selectedPatient.treatmentPlan,
+                            goals: {
+                              consultas: consVal,
+                              botox: botVal
+                            }
+                          };
+
+                          onUpdatePatient(
+                            selectedPatient.id,
+                            selectedPatient.firstName,
+                            selectedPatient.lastName,
+                            selectedPatient.diagnostic,
+                            updatedPlan
+                          );
+                          setPlanMsg("Pre-programação salva com sucesso!");
+                          setTimeout(() => setPlanMsg(null), 3000);
+                        }}
+                        className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-4 py-2 transition shadow-sm cursor-pointer"
+                      >
+                        Salvar Programação
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. PROGRESSO & ESTATÍSTICAS */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Progress Bar Consultas */}
+                    <div className="border border-slate-150 rounded-xl p-4 bg-slate-50/40 space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-bold text-slate-700">Aproveitamento de Consultas</span>
+                        <span className="font-mono font-bold text-teal-700">
+                          {realizedConsultas} / {goalConsultas} ({pctConsultas}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200/60 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(pctConsultas, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Progress Bar Botox */}
+                    {hasBotoxOption && (
+                      <div className="border border-slate-150 rounded-xl p-4 bg-slate-50/40 space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-slate-700">Aproveitamento de Aplicações de Botox</span>
+                          <span className="font-mono font-bold text-purple-700">
+                            {realizedBotox} / {goalBotox} ({pctBotox}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200/60 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(pctBotox, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. FORMULÁRIO DE REGISTRO DE ATTENDANCE */}
+                  <form onSubmit={handleRegisterAttendance} className="border-t border-slate-105 pt-4 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      ➕ Registrar Presença / Atendimento de Consultório
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1">Data da Presença</label>
+                        <input
+                          type="date"
+                          required
+                          value={attendanceDate}
+                          onChange={(e) => setAttendanceDate(e.target.value)}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1">Tipo de Procedimento</label>
+                        <select
+                          value={attendanceType}
+                          onChange={(e) => setAttendanceType(e.target.value as 'consulta' | 'botox')}
+                          className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-800 bg-white focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        >
+                          <option value="consulta">Consulta</option>
+                          {hasBotoxOption && <option value="botox">Aplicação de Botox</option>}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1">Notas / Descritivo Curto</label>
+                        <input
+                          type="text"
+                          value={attendanceNotes}
+                          onChange={(e) => setAttendanceNotes(e.target.value)}
+                          placeholder="Ex: Consulta regular de reavaliação"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 transition cursor-pointer active:scale-95 shadow-sm"
+                      >
+                        Registrar Presença
+                      </button>
+                      {planMsg && (
+                        <span className="text-[10px] font-bold text-emerald-600 animate-pulse">{planMsg}</span>
+                      )}
+                    </div>
+                  </form>
+
+                  {/* 4. TABELA DO HISTÓRICO DE PRESENÇAS */}
+                  <div className="border-t border-slate-100 pt-4 space-y-2">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Histórico de Presenças Clínicas</h4>
+                    {(!selectedPatient.treatmentPlan?.attendances || selectedPatient.treatmentPlan.attendances.length === 0) ? (
+                      <p className="text-xs text-slate-405 italic bg-slate-50 rounded-xl p-4 text-center border border-dashed border-slate-200">
+                        Nenhuma presença registrada ainda neste plano de tratamento de {selectedPatient.firstName}.
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto rounded-xl border border-slate-150">
+                        <table className="w-full text-left text-xs text-slate-600 border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-150 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              <th className="px-4 py-2">Data do Atendimento</th>
+                              <th className="px-4 py-2">Tipo de Atendimento</th>
+                              <th className="px-4 py-2">Descritivo / Notas</th>
+                              <th className="px-4 py-1.5 text-right">Excluir</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {selectedPatient.treatmentPlan.attendances.map((att) => (
+                              <tr key={att.id} className="hover:bg-slate-50/40">
+                                <td className="px-4 py-2.5 font-mono text-slate-700">
+                                  {new Date(att.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                </td>
+                                <td className="px-4 py-2.5">
+                                  {att.type === 'botox' ? (
+                                    <span className="inline-flex rounded-full bg-purple-50 text-[10px] font-bold text-purple-700 px-2.5 py-0.5 border border-purple-100">
+                                      Aplicação de Botox
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex rounded-full bg-teal-50 text-[10px] font-bold text-teal-700 px-2.5 py-0.5 border border-teal-100">
+                                      Consulta
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-2.5 italic text-slate-500 truncate max-w-xs" title={att.notes}>
+                                  {att.notes || '-'}
+                                </td>
+                                <td className="px-4 py-2.5 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveAttendance(att.id)}
+                                    className="p-1 text-slate-400 hover:text-rose-500 rounded hover:bg-rose-50 transition cursor-pointer"
+                                    title="Remover presença"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* List of full diagnostics log entries */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">

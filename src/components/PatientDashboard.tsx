@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Patient, TrackingEntry, DiagnosticType, MedicationPrescription, MedicationConfirmation } from '../types';
 import { CLINICAL_CARE_PLANS } from '../data/carePlans';
+import { SupabaseSchemaStatus } from '../lib/supabase';
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -47,6 +48,7 @@ interface PatientDashboardProps {
   onAddLog: (data: Record<string, any>, notes: string) => void;
   onLogout: () => void;
   onSyncData?: () => Promise<void>;
+  supabaseStatus?: SupabaseSchemaStatus;
 }
 
 export default function PatientDashboard({
@@ -57,7 +59,8 @@ export default function PatientDashboard({
   onChangePassword,
   onAddLog,
   onLogout,
-  onSyncData
+  onSyncData,
+  supabaseStatus
 }: PatientDashboardProps) {
 
   // Auto-sync from Database on mount & every 5 seconds in background
@@ -589,6 +592,38 @@ export default function PatientDashboard({
 
       {/* Main Body */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {supabaseStatus?.missingTreatmentPlanColumn && (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm space-y-3">
+            <h3 className="font-bold text-amber-800 flex items-center gap-2 text-sm">
+              <AlertTriangle className="h-5 w-5 text-amber-606 animate-pulse" />
+              Sincronização Requerida: Atualização no Banco de Dados (Supabase)
+            </h3>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              O banco de dados integrado do aplicativo não possui a coluna de plano de tratamento (<code className="font-mono bg-amber-100 px-1 rounded">treatment_plan</code>). Para que seu médico consiga salvar suas metas presenciais, registro de consultas e presenças com sucesso, é necessário copiar e executar o comando abaixo no <strong>editor SQL do console do Supabase</strong> e recarregar a tela:
+            </p>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <code className="flex-1 bg-slate-900 text-[10px] sm:text-xs text-teal-400 p-3 rounded-lg font-mono overflow-x-auto select-all border border-slate-800 shadow-inner">
+                {"ALTER TABLE patients ADD COLUMN IF NOT EXISTS treatment_plan jsonb DEFAULT '{\"goals\":{\"consultas\":5},\"attendances\":[]}'::jsonb;"}
+              </code>
+              <button
+                type="button"
+                id="copy-alter-sql-pat"
+                onClick={() => {
+                  navigator.clipboard.writeText(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS treatment_plan jsonb DEFAULT '{"goals":{"consultas":5},"attendances":[]}'::jsonb;`);
+                  const btn = document.getElementById('copy-alter-sql-pat');
+                  if (btn) {
+                    btn.innerText = 'Copiado! ✓';
+                    setTimeout(() => { btn.innerText = 'Copiar SQL'; }, 3000);
+                  }
+                }}
+                className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 transition shrink-0 shadow cursor-pointer text-center"
+              >
+                Copiar SQL
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Welcome Banner */}
         <div className="rounded-2xl bg-gradient-to-br from-teal-700 to-emerald-800 p-6 md:p-8 text-white shadow-md shadow-teal-900/10 mb-8 space-y-2">
           <span className="inline-block text-[10px] uppercase font-bold tracking-widest bg-white/20 px-2.5 py-1 rounded">
@@ -1175,6 +1210,113 @@ export default function PatientDashboard({
                   )}
                 </div>
               </div>
+
+              {/* Plano de Acompanhamento Presencial / Treatment Plan */}
+              {(() => {
+                const diagLower = (currentPatient.diagnostic || '').toLowerCase();
+                const hasBotoxOption = 
+                  diagLower.includes('espasticidade') ||
+                  diagLower.includes('distonia') ||
+                  diagLower.includes('enxaqueca') ||
+                  diagLower.includes('sialorreia');
+
+                const goals = currentPatient.treatmentPlan?.goals;
+                const attendances = currentPatient.treatmentPlan?.attendances || [];
+
+                const goalConsultas = goals?.consultas ?? 5;
+                const goalBotox = hasBotoxOption ? (goals?.botox ?? 3) : 0;
+
+                const realizedConsultas = attendances.filter(a => a.type === 'consulta').length;
+                const realizedBotox = hasBotoxOption ? attendances.filter(a => a.type === 'botox').length : 0;
+
+                const pctConsultas = goalConsultas > 0 ? Math.round((realizedConsultas / goalConsultas) * 100) : 0;
+                const pctBotox = goalBotox > 0 ? Math.round((realizedBotox / goalBotox) * 100) : 0;
+
+                return (
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                    <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2 text-sm">
+                      <Calendar className="h-4.5 w-4.5 text-teal-600" />
+                      📋 Meu Plano de Acompanhamento Presencial
+                    </h3>
+                    <p className="text-[11px] text-slate-500 leading-normal">
+                      Confira abaixo o número de procedimentos que o Dr. Diego Dorim planejou para o seu ciclo de tratamento e o seu progresso de presenças.
+                    </p>
+
+                    {/* Progress indicators */}
+                    <div className="space-y-3">
+                      {/* Consultas Progress */}
+                      <div className="rounded-xl border border-slate-150 p-3 bg-slate-50/50 space-y-1.5">
+                        <div className="flex justify-between items-center text-[11px]">
+                          <span className="font-bold text-slate-600">Consultas Clínicas / Retornos</span>
+                          <span className="font-mono font-bold text-teal-700">
+                            {realizedConsultas} de {goalConsultas} ({pctConsultas}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200/50 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(pctConsultas, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Botox Progress if applicable */}
+                      {hasBotoxOption && (
+                        <div className="rounded-xl border border-slate-150 p-3 bg-slate-50/50 space-y-1.5">
+                          <div className="flex justify-between items-center text-[11px]">
+                            <span className="font-bold text-slate-600">Aplicações de Botox</span>
+                            <span className="font-mono font-bold text-purple-700">
+                              {realizedBotox} de {goalBotox} ({pctBotox}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200/50 rounded-full h-2 overflow-hidden">
+                            <div 
+                              className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${Math.min(pctBotox, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Attendances Timeline */}
+                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Consultações & Presenças Coletadas</h4>
+                      {attendances.length === 0 ? (
+                        <p className="text-xs text-slate-400 py-3 text-center italic bg-slate-50 rounded-lg">
+                          Nenhuma presença registrada ainda pelo consultório.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {attendances.map((att) => (
+                            <div key={att.id} className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-150">
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] font-mono text-slate-600 font-semibold block">
+                                  {new Date(att.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                </span>
+                                {att.notes && (
+                                  <p className="text-[10px] text-slate-500 italic max-w-xs truncate" title={att.notes}>
+                                    {att.notes}
+                                  </p>
+                                )}
+                              </div>
+                              {att.type === 'botox' ? (
+                                <span className="rounded-full bg-purple-50 text-[9px] font-bold text-purple-700 px-2 py-0.5 border border-purple-100">
+                                  Aplicação de Botox
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-teal-50 text-[9px] font-bold text-teal-700 px-2 py-0.5 border border-teal-100">
+                                  Consulta
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Column 2: Videos & Guidelines */}

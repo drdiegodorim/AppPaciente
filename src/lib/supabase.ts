@@ -11,6 +11,7 @@ export interface SupabaseSchemaStatus {
   connected: boolean;
   tablesMissing: boolean;
   errors: string[];
+  missingTreatmentPlanColumn?: boolean;
 }
 
 export async function checkSupabaseSchema(): Promise<SupabaseSchemaStatus> {
@@ -27,8 +28,23 @@ export async function checkSupabaseSchema(): Promise<SupabaseSchemaStatus> {
       if (error.code === '42P01') {
         status.tablesMissing = true;
         status.errors.push("A tabela 'doctors' não foi localizada.");
+        return status;
       } else {
         status.errors.push(error.message);
+      }
+    }
+
+    // Check if patients table exists and has the treatment_plan column
+    const { error: patError } = await supabase.from('patients').select('treatment_plan').limit(1);
+    if (patError) {
+      if (patError.code === '42P01') {
+        status.tablesMissing = true;
+        status.errors.push("A tabela 'patients' não foi localizada.");
+      } else if (patError.code === '42703') {
+        status.missingTreatmentPlanColumn = true;
+        status.errors.push("A coluna 'treatment_plan' está ausente na tabela 'patients'.");
+      } else {
+        status.errors.push(patError.message);
       }
     }
   } catch (err: any) {
@@ -38,16 +54,16 @@ export async function checkSupabaseSchema(): Promise<SupabaseSchemaStatus> {
 }
 
 // ==========================================
-// MAp Helpers (Snake to Camel & Camel to Snake)
+// Map Helpers (Snake to Camel & Camel to Snake)
 // ==========================================
 
-function safeParseJSON(val: any): any {
-  if (!val) return [];
+function safeParseJSON(val: any, defaultVal: any = []): any {
+  if (!val) return defaultVal;
   if (typeof val === 'string') {
     try {
       return JSON.parse(val);
     } catch {
-      return [];
+      return defaultVal;
     }
   }
   return val;
@@ -62,7 +78,8 @@ export function mapPatientFromDB(row: any): Patient {
     diagnostic: row.diagnostic || 'Enxaqueca',
     requiresPasswordChange: row.requires_password_change !== undefined ? row.requires_password_change : (row.requiresPasswordChange || false),
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
-    medications: safeParseJSON(row.medications)
+    medications: safeParseJSON(row.medications, []),
+    treatmentPlan: safeParseJSON(row.treatment_plan || row.treatmentPlan, {})
   };
 }
 
@@ -166,7 +183,8 @@ export async function savePatientDB(pat: Patient): Promise<void> {
     diagnostic: pat.diagnostic,
     requires_password_change: pat.requiresPasswordChange,
     created_at: pat.createdAt,
-    medications: pat.medications || []
+    medications: pat.medications || [],
+    treatment_plan: pat.treatmentPlan || null
   });
   if (error) throw error;
 }

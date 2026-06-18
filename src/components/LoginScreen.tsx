@@ -534,7 +534,8 @@ CREATE TABLE IF NOT EXISTS patients (
   diagnostic text NOT NULL,
   requires_password_change boolean NOT NULL DEFAULT false,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  medications jsonb DEFAULT '[]'::jsonb
+  medications jsonb DEFAULT '[]'::jsonb,
+  treatment_plan jsonb DEFAULT '{}'::jsonb
 );
 
 CREATE TABLE IF NOT EXISTS logs (
@@ -590,7 +591,8 @@ CREATE TABLE IF NOT EXISTS patients (
   diagnostic text NOT NULL,
   requires_password_change boolean NOT NULL DEFAULT false,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  medications jsonb DEFAULT '[]'::jsonb
+  medications jsonb DEFAULT '[]'::jsonb,
+  treatment_plan jsonb DEFAULT '{}'::jsonb
 );`}
               </pre>
             </div>
