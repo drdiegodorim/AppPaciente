@@ -576,23 +576,23 @@ export default function PatientDashboard({
     <div className="min-h-screen bg-slate-50 font-sans">
       {/* Patient Navbar */}
       <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
           <div className="flex h-16 justify-between items-center">
             <div className="flex items-center gap-3">
               <span className="flex items-center justify-center rounded-lg bg-emerald-600 p-2 text-white">
                 <Heart className="h-5 w-5" />
               </span>
               <div>
-                <span className="text-base font-bold text-slate-800">Seu Canal de Cuidado</span>
+                <span className="text-sm sm:text-base font-bold text-slate-800">Seu Canal de Cuidado</span>
                 <span className="hidden sm:inline-block ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-100 uppercase tracking-wide">
                   Paciente Ativo
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-600">
-                Olá, <strong>{currentPatient.firstName} {currentPatient.lastName}</strong>
+            <div className="flex items-center gap-2 sm:gap-4 font-sans">
+              <span className="text-xs sm:text-sm text-slate-600 truncate max-w-[100px] sm:max-w-none">
+                Olá, <strong className="font-extrabold">{currentPatient.firstName}</strong>
               </span>
               {onSyncData && (
                 <button
@@ -602,7 +602,7 @@ export default function PatientDashboard({
                   title="Atualizar dados da sessão do paciente em tempo real"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-                  {isSyncing ? "Atualizando..." : "Atualizar Sessão"}
+                  <span className="hidden sm:inline">{isSyncing ? "Atualizando..." : "Atualizar Sessão"}</span>
                 </button>
               )}
               <button
@@ -618,7 +618,7 @@ export default function PatientDashboard({
       </nav>
 
       {/* Main Body */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
         {supabaseStatus?.missingTreatmentPlanColumn && !ignoreSchemaWarning && (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm space-y-3">
             <h3 className="font-bold text-amber-800 flex items-center gap-2 text-sm">
@@ -705,16 +705,18 @@ export default function PatientDashboard({
         )}
 
         {/* Welcome Banner */}
-        <div className="rounded-2xl bg-gradient-to-br from-teal-700 to-emerald-800 p-6 md:p-8 text-white shadow-md shadow-teal-900/10 mb-8 space-y-2">
-          <span className="inline-block text-[10px] uppercase font-bold tracking-widest bg-white/20 px-2.5 py-1 rounded">
+        <div className="rounded-2xl bg-gradient-to-br from-teal-700 to-emerald-800 p-4 sm:p-6 md:p-8 text-white shadow-md shadow-teal-900/10 mb-6 sm:mb-8 space-y-1 sm:space-y-2">
+          <span className="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest bg-white/20 px-2.5 py-1 rounded">
             Seu Tratamento Clínico Integral
           </span>
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+          <h2 className="text-base sm:text-2xl md:text-3xl font-extrabold tracking-tight leading-snug">
             Plano de Cuidado: {currentPatient.diagnostic}
           </h2>
-          <p className="text-sm text-teal-100 max-w-2xl font-light">
-            {carePlan?.description}
-          </p>
+          {carePlan?.description && (
+            <p className="hidden sm:block text-xs sm:text-sm text-teal-100 max-w-2xl font-light leading-relaxed">
+              {carePlan.description}
+            </p>
+          )}
         </div>
 
         {/* ALERTA DE MEDICAÇÃO ATIVO - SE HOUVER ALGUM MEDICAMENTO EM ATRASO OU NA HORA */}
@@ -960,7 +962,7 @@ export default function PatientDashboard({
               <div className="space-y-1.5">
                 <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-sm md:text-base">
                   <Calendar className="h-5 w-5 text-indigo-600 shrink-0" />
-                  Plano Presencial
+                  Acompanhamento do Plano Presencial
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Acompanhe seu ciclo planejado pelo Dr. Diego Dorim, veja metas de consultas e procedimentos na sua linha do tempo.
@@ -972,7 +974,7 @@ export default function PatientDashboard({
                 className="w-full sm:w-auto self-start rounded-xl hover:bg-indigo-700 bg-indigo-600 font-bold text-xs text-white px-5 py-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Calendar className="h-4 w-4 text-white/90" />
-                Acompanhamento do Plano
+                Acompanhamento do Plano Presencial
               </button>
             </div>
           </div>
@@ -1352,7 +1354,7 @@ export default function PatientDashboard({
             </div>
           </div>
         ) : activeSection === 'treatment_plan' ? (
-          <div className="max-w-2xl mx-auto animate-fade-in mb-8 text-left">
+          <div className="max-w-2xl mx-auto animate-fade-in mb-8 text-left px-1 sm:px-0">
             {(() => {
               const diagLower = (currentPatient.diagnostic || '').toLowerCase();
               const hasBotoxOption = 
@@ -1374,12 +1376,12 @@ export default function PatientDashboard({
               const pctBotox = goalBotox > 0 ? Math.round((realizedBotox / goalBotox) * 100) : 0;
 
               return (
-                <div className="rounded-2xl border border-indigo-150 bg-white p-5 md:p-6 shadow-sm space-y-6 font-sans">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="rounded-2xl border border-indigo-150 bg-white p-4 sm:p-6 shadow-sm space-y-6 font-sans">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-3">
                     <div className="space-y-1">
                       <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-sm md:text-base">
-                        <Calendar className="h-5 w-5 text-indigo-600" />
-                        Meu Plano de Acompanhamento Presencial
+                        <Calendar className="h-5 w-5 text-indigo-600 shrink-0" />
+                        Acompanhamento do Plano Presencial
                       </h3>
                       <p className="text-[11px] text-slate-500">
                         Acompanhe seu ciclo planejado pelo Dr. Diego Dorim, metas e consultas em andamento.
@@ -1388,7 +1390,7 @@ export default function PatientDashboard({
                     <button
                       type="button"
                       onClick={() => setActiveSection('dashboard')}
-                      className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold px-3 py-1.5 transition flex items-center gap-1 cursor-pointer shrink-0"
+                      className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold px-3 py-2 transition flex items-center gap-1 cursor-pointer shrink-0 w-full sm:w-auto justify-center"
                     >
                       <ArrowLeft className="h-3.5 w-3.5" />
                       Voltar ao Portal
@@ -1403,9 +1405,9 @@ export default function PatientDashboard({
                   <div className="space-y-4 pt-2">
                     {/* Consultas Progress */}
                     <div className="rounded-xl border border-slate-150 p-4 bg-slate-50/50 space-y-2">
-                      <div className="flex justify-between items-center text-[12px]">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1.5 text-[12px]">
                         <span className="font-extrabold text-slate-700">Consultas Clínicas / Retornos</span>
-                        <span className="font-mono font-extrabold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">
+                        <span className="font-mono font-extrabold text-teal-700 bg-teal-50 px-2 py-0.5 rounded self-start sm:self-auto shrink-0">
                           {realizedConsultas} de {goalConsultas} ({pctConsultas}%)
                         </span>
                       </div>
@@ -1420,9 +1422,9 @@ export default function PatientDashboard({
                     {/* Botox Progress if applicable */}
                     {hasBotoxOption && (
                       <div className="rounded-xl border border-slate-150 p-4 bg-slate-50/50 space-y-2">
-                        <div className="flex justify-between items-center text-[12px]">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1.5 text-[12px]">
                           <span className="font-extrabold text-slate-700">Aplicações de Botox</span>
-                          <span className="font-mono font-extrabold text-purple-700 bg-purple-50 px-2 py-0.5 rounded">
+                          <span className="font-mono font-extrabold text-purple-700 bg-purple-50 px-2 py-0.5 rounded self-start sm:self-auto shrink-0">
                             {realizedBotox} de {goalBotox} ({pctBotox}%)
                           </span>
                         </div>
@@ -1448,26 +1450,28 @@ export default function PatientDashboard({
                     ) : (
                       <div className="space-y-3">
                         {attendances.map((att) => (
-                          <div key={att.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-150">
-                            <div className="space-y-1">
+                          <div key={att.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-150">
+                            <div className="space-y-1 flex-1 min-w-0">
                               <span className="text-[11px] font-mono text-slate-600 font-bold block">
                                 {new Date(att.date + 'T12:00:00').toLocaleDateString('pt-BR')}
                               </span>
                               {att.notes && (
-                                <p className="text-xs text-slate-500 italic max-w-sm" title={att.notes}>
+                                <p className="text-xs text-slate-500 italic max-w-full break-words leading-relaxed">
                                   {att.notes}
                                 </p>
                               )}
                             </div>
-                            {att.type === 'botox' ? (
-                              <span className="rounded-full bg-purple-50 text-[10px] font-extrabold text-purple-700 px-3 py-1 border border-purple-100 uppercase tracking-wide">
-                                Aplicação de Botox
-                              </span>
-                            ) : (
-                              <span className="rounded-full bg-teal-50 text-[10px] font-extrabold text-teal-700 px-3 py-1 border border-teal-100 uppercase tracking-wide">
-                                Consulta
-                              </span>
-                            )}
+                            <div className="shrink-0 self-start sm:self-auto">
+                              {att.type === 'botox' ? (
+                                <span className="inline-block rounded-full bg-purple-50 text-[10px] font-extrabold text-purple-700 px-3 py-1 border border-purple-100 uppercase tracking-wide shrink-0">
+                                  Aplicação de Botox
+                                </span>
+                              ) : (
+                                <span className="inline-block rounded-full bg-teal-50 text-[10px] font-extrabold text-teal-700 px-3 py-1 border border-teal-100 uppercase tracking-wide shrink-0">
+                                  Consulta
+                                </span>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1478,130 +1482,7 @@ export default function PatientDashboard({
             })()}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Column 1: Plano de Acompanhamento Presencial / Treatment Plan */}
-            <div className="space-y-6">
-              {(() => {
-                const diagLower = (currentPatient.diagnostic || '').toLowerCase();
-                const hasBotoxOption = 
-                  diagLower.includes('espasticidade') ||
-                  diagLower.includes('distonia') ||
-                  diagLower.includes('enxaqueca') ||
-                  diagLower.includes('sialorreia');
-
-                const goals = currentPatient.treatmentPlan?.goals;
-                const attendances = currentPatient.treatmentPlan?.attendances || [];
-
-                const goalConsultas = goals?.consultas ?? 5;
-                const goalBotox = hasBotoxOption ? (goals?.botox ?? 3) : 0;
-
-                const realizedConsultas = attendances.filter(a => a.type === 'consulta').length;
-                const realizedBotox = hasBotoxOption ? attendances.filter(a => a.type === 'botox').length : 0;
-
-                const pctConsultas = goalConsultas > 0 ? Math.round((realizedConsultas / goalConsultas) * 100) : 0;
-                const pctBotox = goalBotox > 0 ? Math.round((realizedBotox / goalBotox) * 100) : 0;
-
-                return (
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-                    <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2 text-sm">
-                      <Calendar className="h-4.5 w-4.5 text-teal-600" />
-                      📋 Meu Plano de Acompanhamento Presencial
-                    </h3>
-                    <p className="text-[11px] text-slate-500 leading-normal">
-                      Confira abaixo o número de procedimentos que o Dr. Diego Dorim planejou para o seu ciclo de tratamento e o seu progresso de presenças.
-                    </p>
-
-                    {/* Progress indicators */}
-                    <div className="space-y-3">
-                      {/* Consultas Progress */}
-                      <div className="rounded-xl border border-slate-150 p-3 bg-slate-50/50 space-y-1.5">
-                        <div className="flex justify-between items-center text-[11px]">
-                          <span className="font-bold text-slate-600">Consultas Clínicas / Retornos</span>
-                          <span className="font-mono font-bold text-teal-700">
-                            {realizedConsultas} de {goalConsultas} ({pctConsultas}%)
-                          </span>
-                        </div>
-                        <div className="w-full bg-slate-200/50 rounded-full h-2 overflow-hidden">
-                          <div 
-                            className="bg-teal-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(pctConsultas, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Botox Progress if applicable */}
-                      {hasBotoxOption && (
-                        <div className="rounded-xl border border-slate-150 p-3 bg-slate-50/50 space-y-1.5">
-                          <div className="flex justify-between items-center text-[11px]">
-                            <span className="font-bold text-slate-600">Aplicações de Botox</span>
-                            <span className="font-mono font-bold text-purple-700">
-                              {realizedBotox} de {goalBotox} ({pctBotox}%)
-                            </span>
-                          </div>
-                          <div className="w-full bg-slate-200/50 rounded-full h-2 overflow-hidden">
-                            <div 
-                              className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${Math.min(pctBotox, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Attendances Timeline */}
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Consultações & Presenças Coletadas</h4>
-                      {attendances.length === 0 ? (
-                        <p className="text-xs text-slate-400 py-3 text-center italic bg-slate-50 rounded-lg">
-                          Nenhuma presença registrada ainda pelo consultório.
-                        </p>
-                      ) : (
-                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                          {attendances.map((att) => (
-                            <div key={att.id} className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-150">
-                              <div className="space-y-0.5">
-                                <span className="text-[10px] font-mono text-slate-600 font-semibold block">
-                                  {new Date(att.date + 'T12:00:00').toLocaleDateString('pt-BR')}
-                                </span>
-                                {att.notes && (
-                                  <p className="text-[10px] text-slate-500 italic max-w-xs truncate" title={att.notes}>
-                                    {att.notes}
-                                  </p>
-                                )}
-                              </div>
-                              {att.type === 'botox' ? (
-                                <span className="rounded-full bg-purple-50 text-[9px] font-bold text-purple-700 px-2 py-0.5 border border-purple-100">
-                                  Aplicação de Botox
-                                </span>
-                              ) : (
-                                <span className="rounded-full bg-teal-50 text-[9px] font-bold text-teal-700 px-2 py-0.5 border border-teal-100">
-                                  Consulta
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Botão de Redirecionamento para Página do Plano */}
-                    <div className="pt-2 border-t border-slate-100 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setActiveSection('treatment_plan')}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 text-xs font-bold py-3 px-4 transition active:scale-[0.98] cursor-pointer"
-                      >
-                        <Calendar className="h-4 w-4 shrink-0" />
-                        Ver Página Completa do Meu Plano
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Column 2: Videos & Guidelines */}
-            <div className="space-y-6">
+          <div className="max-w-2xl mx-auto space-y-6">
               {/* YouTube Material */}
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
@@ -1742,7 +1623,6 @@ export default function PatientDashboard({
                   <p>Estas orientações foram prescritas exclusivamente pelo nosso consultório para auxiliar na evolução do seu tratamento.</p>
                 </div>
               </div>
-            </div>
           </div>
         )}
       </div>
