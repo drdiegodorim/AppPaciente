@@ -79,8 +79,22 @@ export function mapPatientFromDB(row: any): Patient {
     try {
       const backupPlan = JSON.parse(medications[backupIndex].dosage || '{}');
       if (backupPlan && Object.keys(backupPlan).length > 0) {
-        // Use backup if native field is empty
-        if (!treatmentPlan || Object.keys(treatmentPlan).length === 0) {
+        const backupAtts = backupPlan.attendances || [];
+        const nativeAtts = treatmentPlan?.attendances || [];
+        
+        const backupGoals = backupPlan.goals || {};
+        const nativeGoals = treatmentPlan?.goals || {};
+        
+        const nativeConsultas = nativeGoals.consultas ?? 5;
+        const nativeBotox = nativeGoals.botox;
+        const backupConsultas = backupGoals.consultas ?? 5;
+        const backupBotox = backupGoals.botox;
+
+        const isNativeDefault = nativeAtts.length === 0 && nativeConsultas === 5 && nativeBotox === undefined;
+        const isBackupBetter = backupAtts.length > nativeAtts.length || 
+          (isNativeDefault && (backupAtts.length > 0 || backupConsultas !== 5 || backupBotox !== undefined));
+
+        if (!treatmentPlan || Object.keys(treatmentPlan).length === 0 || isNativeDefault || isBackupBetter) {
           treatmentPlan = backupPlan;
         }
       }

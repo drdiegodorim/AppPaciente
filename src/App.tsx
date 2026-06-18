@@ -256,11 +256,16 @@ export default function App() {
                     const localAtts = localPat.treatmentPlan.attendances || [];
                     const dbAtts = dbPat.treatmentPlan?.attendances || [];
                     
-                    const hasMoreLocalAtts = localAtts.length > dbAtts.length;
-                    const hasLocalGoals = localPat.treatmentPlan.goals && 
-                      (!dbPat.treatmentPlan || !dbPat.treatmentPlan.goals);
+                    const localGoals = localPat.treatmentPlan.goals || {};
+                    const dbGoals = dbPat.treatmentPlan?.goals || {};
                     
-                    if (hasMoreLocalAtts || hasLocalGoals) {
+                    const isDbDefault = dbAtts.length === 0 && (dbGoals.consultas ?? 5) === 5 && dbGoals.botox === undefined;
+                    const isLocalRicher = localAtts.length > dbAtts.length || 
+                      (localAtts.length === dbAtts.length && localAtts.length > 0) ||
+                      (localGoals.consultas !== undefined && localGoals.consultas !== 5) ||
+                      localGoals.botox !== undefined;
+                    
+                    if (isDbDefault && isLocalRicher) {
                       return {
                         ...dbPat,
                         treatmentPlan: localPat.treatmentPlan
@@ -609,11 +614,16 @@ export default function App() {
                   const localAtts = localPat.treatmentPlan.attendances || [];
                   const dbAtts = dbPat.treatmentPlan?.attendances || [];
                   
-                  const hasMoreLocalAtts = localAtts.length > dbAtts.length;
-                  const hasLocalGoals = localPat.treatmentPlan.goals && 
-                    (!dbPat.treatmentPlan || !dbPat.treatmentPlan.goals);
+                  const localGoals = localPat.treatmentPlan.goals || {};
+                  const dbGoals = dbPat.treatmentPlan?.goals || {};
                   
-                  if (hasMoreLocalAtts || hasLocalGoals) {
+                  const isDbDefault = dbAtts.length === 0 && (dbGoals.consultas ?? 5) === 5 && dbGoals.botox === undefined;
+                  const isLocalRicher = localAtts.length > dbAtts.length || 
+                    (localAtts.length === dbAtts.length && localAtts.length > 0) ||
+                    (localGoals.consultas !== undefined && localGoals.consultas !== 5) ||
+                    localGoals.botox !== undefined;
+                  
+                  if (isDbDefault && isLocalRicher) {
                     return {
                       ...dbPat,
                       treatmentPlan: localPat.treatmentPlan
