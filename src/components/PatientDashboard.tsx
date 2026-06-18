@@ -119,7 +119,7 @@ export default function PatientDashboard({
   const [testNotificationSent, setTestNotificationSent] = useState(false);
   const [showPushModal, setShowPushModal] = useState(false);
   const [activeStudyTab, setActiveStudyTab] = useState<'patient' | 'companion'>('patient');
-  const [activeSection, setActiveSection] = useState<'dashboard' | 'diary' | 'secretariat'>('dashboard');
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'diary' | 'secretariat' | 'treatment_plan'>('dashboard');
 
   // Auto-show push permission prompt popup if permission is default and not dismissed in session
   React.useEffect(() => {
@@ -908,15 +908,15 @@ export default function PatientDashboard({
           )}
         </div>
 
-        {/* DUAS ÁREAS DE AÇÃO RÁPIDA: DIÁRIO & SECRETARIA */}
+        {/* TRÊS ÁREAS DE AÇÃO RÁPIDA: DIÁRIO, SECRETARIA & PLANO */}
         {activeSection === 'dashboard' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* CARD DE ENTRADA DO DIÁRIO DE EVOLUÇÃO */}
             {fields.length > 0 && (
-              <div className="rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50/40 to-emerald-50/20 p-5 md:p-6 shadow-sm flex flex-col justify-between gap-4">
-                <div className="space-y-1.5">
+              <div className="rounded-2xl border border-rose-100 bg-gradient-to-br from-rose-50/40 to-orange-50/20 p-5 md:p-6 shadow-sm flex flex-col justify-between gap-4">
+                <div className="space-y-1.5 font-sans">
                   <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-sm md:text-base">
-                    <PlusCircle className="h-5 w-5 text-teal-600 shrink-0" />
+                    <PlusCircle className="h-5 w-5 text-rose-600 shrink-0" />
                     Meu Diário de Evolução
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
@@ -926,19 +926,19 @@ export default function PatientDashboard({
                 <button
                   type="button"
                   onClick={() => setActiveSection('diary')}
-                  className="w-full sm:w-auto self-start rounded-xl hover:bg-teal-700 bg-teal-600 font-bold text-xs text-white px-5 py-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-auto self-start rounded-xl hover:bg-rose-700 bg-rose-600 font-bold text-xs text-white px-5 py-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <PlusCircle className="h-4 w-4 fill-white/10" />
-                  registro de dor de cabeça
+                  Registro da dor de cabeça
                 </button>
               </div>
             )}
 
             {/* CARD DE ENTRADA DA SECRETARIA & ENVIO DE EXAMES */}
-            <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/40 to-slate-50/20 p-5 md:p-6 shadow-sm flex flex-col justify-between gap-4">
-              <div className="space-y-1.5">
+            <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/40 to-slate-50/20 p-5 md:p-6 shadow-sm flex flex-col justify-between gap-4">
+              <div className="space-y-1.5 font-sans">
                 <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-sm md:text-base">
-                  <FileText className="h-5 w-5 text-indigo-600 shrink-0" />
+                  <FileText className="h-5 w-5 text-emerald-600 shrink-0" />
                   Secretaria Virtual & Central de Exames
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
@@ -948,10 +948,31 @@ export default function PatientDashboard({
               <button
                 type="button"
                 onClick={() => setActiveSection('secretariat')}
-                className="w-full sm:w-auto self-start rounded-xl hover:bg-indigo-700 bg-indigo-600 font-bold text-xs text-white px-5 py-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto self-start rounded-xl hover:bg-emerald-700 bg-emerald-600 font-bold text-xs text-white px-5 py-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <FileText className="h-4 w-4 text-white/90" />
-                Acessar Secretaria & Envio de Exames
+                Falar no Consultório / Enviar Exames
+              </button>
+            </div>
+
+            {/* CARD DE ENTRADA DO PLANO DE ACOMPANHAMENTO PRESENCIAL */}
+            <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/40 to-purple-50/20 p-5 md:p-6 shadow-sm flex flex-col justify-between gap-4 font-sans">
+              <div className="space-y-1.5">
+                <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-sm md:text-base">
+                  <Calendar className="h-5 w-5 text-indigo-600 shrink-0" />
+                  Plano Presencial
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Acompanhe seu ciclo planejado pelo Dr. Diego Dorim, veja metas de consultas e procedimentos na sua linha do tempo.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSection('treatment_plan')}
+                className="w-full sm:w-auto self-start rounded-xl hover:bg-indigo-700 bg-indigo-600 font-bold text-xs text-white px-5 py-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Calendar className="h-4 w-4 text-white/90" />
+                Acompanhamento do Plano
               </button>
             </div>
           </div>
@@ -1330,6 +1351,132 @@ export default function PatientDashboard({
               </div>
             </div>
           </div>
+        ) : activeSection === 'treatment_plan' ? (
+          <div className="max-w-2xl mx-auto animate-fade-in mb-8 text-left">
+            {(() => {
+              const diagLower = (currentPatient.diagnostic || '').toLowerCase();
+              const hasBotoxOption = 
+                diagLower.includes('espasticidade') ||
+                diagLower.includes('distonia') ||
+                diagLower.includes('enxaqueca') ||
+                diagLower.includes('sialorreia');
+
+              const goals = currentPatient.treatmentPlan?.goals;
+              const attendances = currentPatient.treatmentPlan?.attendances || [];
+
+              const goalConsultas = goals?.consultas ?? 5;
+              const goalBotox = hasBotoxOption ? (goals?.botox ?? 3) : 0;
+
+              const realizedConsultas = attendances.filter(a => a.type === 'consulta').length;
+              const realizedBotox = hasBotoxOption ? attendances.filter(a => a.type === 'botox').length : 0;
+
+              const pctConsultas = goalConsultas > 0 ? Math.round((realizedConsultas / goalConsultas) * 100) : 0;
+              const pctBotox = goalBotox > 0 ? Math.round((realizedBotox / goalBotox) * 100) : 0;
+
+              return (
+                <div className="rounded-2xl border border-indigo-150 bg-white p-5 md:p-6 shadow-sm space-y-6 font-sans">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div className="space-y-1">
+                      <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-sm md:text-base">
+                        <Calendar className="h-5 w-5 text-indigo-600" />
+                        Meu Plano de Acompanhamento Presencial
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        Acompanhe seu ciclo planejado pelo Dr. Diego Dorim, metas e consultas em andamento.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection('dashboard')}
+                      className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold px-3 py-1.5 transition flex items-center gap-1 cursor-pointer shrink-0"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      Voltar ao Portal
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Confira abaixo o número total de atendimentos e procedimentos que o Dr. Diego Dorim estabeleceu como meta para o seu ciclo de tratamento de {currentPatient.diagnostic || "Acompanhamento Clínico"}. Suas presenças registradas são computadas para mostrar o seu progresso rumo à alta ou melhora clínica.
+                  </p>
+
+                  {/* Progress indicators */}
+                  <div className="space-y-4 pt-2">
+                    {/* Consultas Progress */}
+                    <div className="rounded-xl border border-slate-150 p-4 bg-slate-50/50 space-y-2">
+                      <div className="flex justify-between items-center text-[12px]">
+                        <span className="font-extrabold text-slate-700">Consultas Clínicas / Retornos</span>
+                        <span className="font-mono font-extrabold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">
+                          {realizedConsultas} de {goalConsultas} ({pctConsultas}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200/50 rounded-full h-2.5 overflow-hidden">
+                        <div 
+                          className="bg-teal-600 h-2.5 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(pctConsultas, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Botox Progress if applicable */}
+                    {hasBotoxOption && (
+                      <div className="rounded-xl border border-slate-150 p-4 bg-slate-50/50 space-y-2">
+                        <div className="flex justify-between items-center text-[12px]">
+                          <span className="font-extrabold text-slate-700">Aplicações de Botox</span>
+                          <span className="font-mono font-extrabold text-purple-700 bg-purple-50 px-2 py-0.5 rounded">
+                            {realizedBotox} de {goalBotox} ({pctBotox}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200/50 rounded-full h-2.5 overflow-hidden">
+                          <div 
+                            className="bg-purple-600 h-2.5 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(pctBotox, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Attendances Timeline */}
+                  <div className="space-y-3 pt-4 border-t border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      📅 Linha do Tempo de Procedimentos & Retornos
+                    </h4>
+                    {attendances.length === 0 ? (
+                      <p className="text-xs text-slate-400 py-6 text-center italic bg-slate-50 rounded-lg">
+                        Nenhuma presença registrada ainda pelo consultório.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {attendances.map((att) => (
+                          <div key={att.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-150">
+                            <div className="space-y-1">
+                              <span className="text-[11px] font-mono text-slate-600 font-bold block">
+                                {new Date(att.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                              </span>
+                              {att.notes && (
+                                <p className="text-xs text-slate-500 italic max-w-sm" title={att.notes}>
+                                  {att.notes}
+                                </p>
+                              )}
+                            </div>
+                            {att.type === 'botox' ? (
+                              <span className="rounded-full bg-purple-50 text-[10px] font-extrabold text-purple-700 px-3 py-1 border border-purple-100 uppercase tracking-wide">
+                                Aplicação de Botox
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-teal-50 text-[10px] font-extrabold text-teal-700 px-3 py-1 border border-teal-100 uppercase tracking-wide">
+                                Consulta
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Column 1: Plano de Acompanhamento Presencial / Treatment Plan */}
@@ -1435,6 +1582,18 @@ export default function PatientDashboard({
                           ))}
                         </div>
                       )}
+                    </div>
+
+                    {/* Botão de Redirecionamento para Página do Plano */}
+                    <div className="pt-2 border-t border-slate-100 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setActiveSection('treatment_plan')}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 text-xs font-bold py-3 px-4 transition active:scale-[0.98] cursor-pointer"
+                      >
+                        <Calendar className="h-4 w-4 shrink-0" />
+                        Ver Página Completa do Meu Plano
+                      </button>
                     </div>
                   </div>
                 );
