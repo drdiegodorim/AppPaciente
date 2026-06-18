@@ -1647,7 +1647,7 @@ Ficamos no aguardo de sua confirmação. Abraços.`;
       {editingPatient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full mx-4 shadow-xl space-y-4">
-            <div className="flex items-center gap-3 text-teal-650">
+            <div className="flex items-center gap-3 text-teal-600">
               <div className="p-2 bg-teal-50 rounded-full">
                 <Edit className="h-6 w-6 text-teal-600" />
               </div>

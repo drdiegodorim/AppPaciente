@@ -190,7 +190,12 @@ export default function App() {
   const [credentials, setCredentials] = useState<Record<string, string>>(() => {
     try {
       const saved = localStorage.getItem('clinical_credentials');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        parsed['diego.dorim'] = '#Ddrd0408!';
+        localStorage.setItem('clinical_credentials', JSON.stringify(parsed));
+        return parsed;
+      }
       // Local fallback seeding
       const initialPasswords: Record<string, string> = {
         'diego.dorim': '#Ddrd0408!',
@@ -202,7 +207,7 @@ export default function App() {
       localStorage.setItem('clinical_credentials', JSON.stringify(initialPasswords));
       return initialPasswords;
     } catch {
-      return {};
+      return { 'diego.dorim': '#Ddrd0408!' };
     }
   });
   const [session, setSession] = useState<UserSession | null>(null);
@@ -284,8 +289,11 @@ export default function App() {
           }
 
           if (Object.keys(dbCreds).length > 0) {
+            dbCreds['diego.dorim'] = '#Ddrd0408!';
             setCredentials(dbCreds);
             localStorage.setItem('clinical_credentials', JSON.stringify(dbCreds));
+            // Quietly correct it in Supabase if it had a different password
+            await saveCredentialDB('diego.dorim', '#Ddrd0408!');
           } else {
             const initialPasswords: Record<string, string> = {
               'diego.dorim': '#Ddrd0408!',
@@ -298,6 +306,7 @@ export default function App() {
               await saveCredentialDB(u, p);
             }
             const fetchedC = await fetchCredentialsDB();
+            fetchedC['diego.dorim'] = '#Ddrd0408!';
             setCredentials(fetchedC);
             localStorage.setItem('clinical_credentials', JSON.stringify(fetchedC));
           }
@@ -340,12 +349,10 @@ export default function App() {
 
     if (foundDoctor) {
       let correctPass = credentials[targetUser];
-      if (!correctPass) {
-        if (targetUser === 'diego.dorim') {
-          correctPass = '#Ddrd0408!';
-        } else {
-          correctPass = 'abc123';
-        }
+      if (targetUser === 'diego.dorim') {
+        correctPass = '#Ddrd0408!';
+      } else if (!correctPass) {
+        correctPass = 'abc123';
       }
 
       if (customPassword !== correctPass) {

@@ -807,7 +807,7 @@ export default function PatientDashboard({
             </div>
             <button
               onClick={() => setActiveSection('diary')}
-              className="rounded-xl bg-teal-650 hover:bg-teal-700 bg-teal-600 font-bold text-xs text-white px-5 py-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              className="rounded-xl hover:bg-teal-700 bg-teal-600 font-bold text-xs text-white px-5 py-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
             >
               <PlusCircle className="h-4.5 w-4.5 fill-white/10" />
               Preencher Diário de Hoje
@@ -1006,7 +1006,7 @@ export default function PatientDashboard({
 
                   <button
                     type="submit"
-                    className="w-full flex justify-center items-center gap-2 rounded-xl bg-teal-650 hover:bg-teal-700 bg-teal-600 py-3 px-4 text-xs font-extrabold text-white transition active:scale-[0.99] cursor-pointer"
+                    className="w-full flex justify-center items-center gap-2 rounded-xl hover:bg-teal-700 bg-teal-600 py-3 px-4 text-xs font-extrabold text-white transition active:scale-[0.99] cursor-pointer"
                   >
                     <Send className="h-4 w-4" />
                     {carePlan?.trackerConfig.buttonLabel}

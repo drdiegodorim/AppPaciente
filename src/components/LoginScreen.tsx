@@ -390,7 +390,7 @@ export default function LoginScreen({ onLogin, patients, onRegisterDoctor, supab
             <div className="pt-1">
               <button
                 type="submit"
-                className="flex w-full justify-center rounded-xl bg-teal-650 hover:bg-teal-700 bg-teal-650 py-3 px-4 text-xs font-bold text-white transition-all shadow-md shadow-teal-600/10 cursor-pointer active:scale-[0.99] hover:shadow-lg"
+                className="flex w-full justify-center rounded-xl bg-emerald-600 hover:bg-emerald-700 py-3 px-4 text-xs font-bold text-white transition-all shadow-md shadow-emerald-600/10 cursor-pointer active:scale-[0.99] hover:shadow-lg"
               >
                 Entrar no Consultório
               </button>
